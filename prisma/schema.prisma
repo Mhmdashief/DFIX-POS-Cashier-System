@@ -1,0 +1,57 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// 1. Data User (Untuk Login Kasir/Admin)
+model User {
+  id        String   @id @default(uuid())
+  username  String   @unique
+  password  String
+  role      String   // "admin" atau "kasir"
+  createdAt DateTime @default(now())
+}
+
+// 2. Data Pelanggan
+model Customer {
+  id           String        @id @default(uuid())
+  name         String
+  phone        String
+  address      String?
+  transactions Transaction[]
+  createdAt    DateTime      @default(now())
+}
+
+// 3. Data Jasa Reparasi
+model Service {
+  id          String   @id @default(uuid())
+  name        String
+  category    String
+  price       Int
+  createdAt   DateTime @default(now())
+}
+
+// 4. Data Bahan (Inventory)
+model Material {
+  id        String   @id @default(uuid())
+  name      String
+  stock     Int
+  unit      String   // misal: "pcs", "kg", "meter"
+  updatedAt DateTime @updatedAt
+}
+
+// 5. Data Transaksi
+model Transaction {
+  id              String   @id @default(uuid())
+  customer        Customer @relation(fields: [customerId], references: [id])
+  customerId      String
+  totalPrice      Int
+  status          String   // "Diproses", "Selesai", "Dibatalkan"
+  paymentStatus   String   // "Lunas", "DP Bayar", "Belum Bayar"
+  createdAt       DateTime @default(now())
+}

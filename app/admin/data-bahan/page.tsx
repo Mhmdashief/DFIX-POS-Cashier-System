@@ -1,94 +1,178 @@
 "use client";
 
-import { Package, ShieldCheck, AlertTriangle, XCircle, Search, Plus, Calendar, MoreHorizontal } from "lucide-react";
-import { StatCard } from "@/components/StatCard"; // Pastikan path benar
-
-// Helper untuk Badge Status Bahan
-const getStatusBadge = (status: string) => {
-  if (status === "Aman") return "bg-green-50 text-green-700 border-green-200";
-  if (status === "Menipis") return "bg-amber-50 text-amber-700 border-amber-200";
-  return "bg-rose-50 text-rose-700 border-rose-200"; // Habis
-};
-
-const dataBahan = [
-  { no: "01", nama: "Lem Sepatu", varian: "Perekat", kategori: "Resleting", stok: "15 Botol", status: "Aman", update: "07 Feb 2026" },
-  { no: "02", nama: "Ring D", varian: "Gold - 2 cm", kategori: "Aksesoris", stok: "12 Pcs", status: "Aman", update: "10 Feb 2026" },
-  { no: "03", nama: "Lem Kuning", varian: "-", kategori: "Lem", stok: "3 Pcs", status: "Menipis", update: "11 Feb 2026" },
-  { no: "04", nama: "Ring D", varian: "Gold - 2 cm", kategori: "Aksesoris", stok: "12 Pcs", status: "Habis", update: "10 Feb 2026" },
-  { no: "05", nama: "Lem Kuning", varian: "-", kategori: "Lem", stok: "3 Pcs", status: "Menipis", update: "11 Feb 2026" },
-];
+import React, { useState, useEffect } from "react";
+import { Search, Plus, MoreHorizontal, ChevronDown, Calendar, Package, CheckCircle, AlertTriangle, XCircle } from "lucide-react";
+import { supabase } from "@/lib/supabase";
+import TambahBahanModal from "@/components/TambahBahanModal";
+import EditBahanModal from "@/components/EditBahanModal";
 
 export default function DataBahanPage() {
+  const [bahan, setBahan] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeMenu, setActiveMenu] = useState<string | null>(null);
+
+  const [isTambahOpen, setIsTambahOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [selectedBahan, setSelectedBahan] = useState<any>(null);
+
+  const fetchBahan = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('stok_bahan')
+        .select('*')
+        .order('nama_bahan', { ascending: true });
+      if (error) throw error;
+      setBahan(data || []);
+    } catch (error: any) {
+      console.error("Error fetching data:", error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleHapus = async (id: string) => {
+    if (confirm("Apakah Anda yakin ingin menghapus bahan ini secara permanen?")) {
+      const { error } = await supabase.from('stok_bahan').delete().eq('id', id);
+      if (!error) {
+        fetchBahan();
+        setActiveMenu(null);
+      }
+    }
+  };
+
+  useEffect(() => { fetchBahan(); }, []);
+
+  const stats = {
+    total: bahan.length,
+    aman: bahan.filter(b => Number(b.stok_bahan) >= 5).length,
+    menipis: bahan.filter(b => Number(b.stok_bahan) > 0 && Number(b.stok_bahan) < 5).length,
+    habis: bahan.filter(b => Number(b.stok_bahan) <= 0).length
+  };
+
+  const filteredBahan = bahan.filter(b => 
+    (b.nama_bahan || "").toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
-    <div className="space-y-6">
-      {/* 1. Stats Grid */}
-      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard title="Total Bahan" value="24" sub="Stok bahan" icon={Package} colorClass="text-zinc-600 bg-zinc-100" />
-        <StatCard title="Stok Aman" value="18" sub="Stok tersedia" icon={ShieldCheck} colorClass="text-green-600 bg-green-50" />
-        <StatCard title="Stok Menipis" value="4" sub="Perlu restock" icon={AlertTriangle} colorClass="text-amber-600 bg-amber-50" />
-        <StatCard title="Stok Habis" value="2" sub="Segera tambah" icon={XCircle} colorClass="text-rose-600 bg-rose-50" />
-      </section>
-
-      {/* 2. Controls Section */}
-      <section className="flex flex-col md:flex-row justify-between items-center gap-4">
-        <div>
-            <h2 className="text-lg font-bold text-zinc-900">Manajemen Bahan</h2>
-            <p className="text-sm text-zinc-500">Mengatur stock bahan pada toko</p>
-        </div>
+    <div className="min-h-screen bg-white p-8 w-full font-sans text-[#1E1E1E]">
+      <div className="w-full max-w-7xl mx-auto space-y-10">
         
-        <div className="flex gap-2 w-full md:w-auto">
-            <button className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white rounded-lg text-sm font-medium hover:bg-zinc-800 transition-colors">
-                <Plus size={18} /> Tambah Bahan
-            </button>
-            <div className="relative flex-1 md:w-64">
-                <Search className="absolute left-3 top-2.5 text-zinc-400" size={18} />
-                <input type="text" placeholder="Search" className="w-full pl-10 pr-4 py-2 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-200" />
+        {/* --- STATISTIK CARDS (EXACT UI MATCH) --- */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            { label: "Total Bahan", value: stats.total, unit: "Jenis", icon: <Package size={22} />, color: "text-[#1E1E1E]", iconColor: "text-blue-500", border: "border-blue-100" },
+            { label: "Stok Aman", value: stats.aman, unit: "Item", icon: <CheckCircle size={22} />, color: "text-[#1E1E1E]", iconColor: "text-green-500", border: "border-green-100" },
+            { label: "Bahan Menipis", value: stats.menipis, unit: "Item", icon: <AlertTriangle size={22} />, color: "text-orange-500", iconColor: "text-orange-500", border: "border-orange-100" },
+            { label: "Bahan Habis", value: stats.habis, unit: "Item", icon: <XCircle size={22} />, color: "text-red-500", iconColor: "text-red-500", border: "border-red-100" },
+          ].map((s, i) => (
+            <div key={i} className="bg-white border border-gray-100 p-6 rounded-[24px] flex justify-between items-center shadow-sm">
+              <div className="space-y-1">
+                <p className="text-gray-400 text-[13px] font-medium">{s.label}</p>
+                <div className="flex items-baseline gap-1.5">
+                  <h3 className={`text-[26px] font-bold leading-tight ${s.color}`}>{s.value}</h3>
+                  <span className={`text-[13px] font-medium ${s.color === 'text-[#1E1E1E]' ? 'text-gray-400' : s.color}`}>{s.unit}</span>
+                </div>
+              </div>
+              <div className={`w-12 h-12 border ${s.border} ${s.iconColor} rounded-full flex items-center justify-center flex-shrink-0`}>
+                {s.icon}
+              </div>
             </div>
-            <button className="flex items-center gap-2 px-4 py-2 border border-zinc-200 rounded-lg text-sm font-medium hover:bg-zinc-50 transition-colors">
-                <Calendar size={18} /> Filter
-            </button>
+          ))}
         </div>
-      </section>
 
-      {/* 3. Table Section */}
-      <section className="bg-white p-6 rounded-2xl border border-zinc-200">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="text-zinc-400 border-b border-zinc-100">
-              <tr>
-                <th className="pb-4 font-medium">No</th>
-                <th className="pb-4 font-medium">Nama Bahan</th>
-                <th className="pb-4 font-medium">Varian</th>
-                <th className="pb-4 font-medium">Kategori</th>
-                <th className="pb-4 font-medium">Stok/Satuan</th>
-                <th className="pb-4 font-medium">Status</th>
-                <th className="pb-4 font-medium">Update</th>
-                <th className="pb-4 font-medium text-right">Aksi</th>
+        {/* --- HEADER & SEARCH --- */}
+        <div className="flex flex-col md:flex-row justify-between items-end gap-4">
+          <div>
+            <h1 className="text-[24px] font-bold text-[#1E1E1E]">Manajemen Bahan</h1>
+            <p className="text-[14px] text-gray-400 mt-1">Mengatur stock bahan pada toko</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <button onClick={() => setIsTambahOpen(true)} className="flex items-center gap-2 px-5 py-3 border border-gray-200 rounded-2xl text-[14px] font-semibold text-gray-600 hover:bg-gray-50 transition-all">
+              <Plus size={18} className="text-yellow-500" /> Tambah Bahan
+            </button>
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-yellow-500" size={18} />
+              <input 
+                placeholder="Search" 
+                className="pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-2xl text-[14px] focus:outline-none w-[260px] placeholder:text-gray-400 font-medium" 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            <button className="flex items-center gap-2 px-5 py-3 border border-gray-200 rounded-2xl text-[14px] font-semibold text-gray-600 hover:bg-gray-50">
+              <Calendar size={18} className="text-yellow-500" /> Filter <ChevronDown size={14} />
+            </button>
+          </div>
+        </div>
+
+        {/* --- TABEL --- */}
+        <div className="w-full overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="border-b border-gray-100 text-gray-400 text-[13px] uppercase tracking-wider font-bold">
+                <th className="py-4 px-2 w-12 text-center">No</th>
+                <th className="py-4 px-2">Nama Bahan</th>
+                <th className="py-4 px-2">Varian</th>
+                <th className="py-4 px-2">Kategori</th>
+                <th className="py-4 px-2">Stok/Satuan</th>
+                <th className="py-4 px-2">Status</th>
+                <th className="py-4 px-2">Update</th>
+                <th className="py-4 px-2 text-right">Aksi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-100">
-              {dataBahan.map((row, i) => (
-                <tr key={i} className="hover:bg-zinc-50 transition-colors">
-                  <td className="py-4 text-zinc-500">{row.no}</td>
-                  <td className="py-4 font-medium text-zinc-900">{row.nama}</td>
-                  <td className="py-4 text-zinc-600">{row.varian}</td>
-                  <td className="py-4 text-zinc-600">{row.kategori}</td>
-                  <td className="py-4 text-zinc-600">{row.stok}</td>
-                  <td className="py-4">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getStatusBadge(row.status)}`}>
-                        {row.status}
+            <tbody className="text-[14px]">
+              {loading ? (
+                <tr><td colSpan={8} className="py-20 text-center text-gray-400">Memuat data...</td></tr>
+              ) : filteredBahan.map((item, index) => (
+                <tr key={item.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
+                  <td className="py-6 px-2 text-gray-400 text-center font-medium">{String(index + 1).padStart(2, '0')}</td>
+                  <td className="py-6 px-2 font-bold text-[#1E1E1E]">{item.nama_bahan}</td>
+                  <td className="py-6 px-2 text-gray-500 font-medium">{item.varian || "-"}</td>
+                  <td className="py-6 px-2 text-gray-500 font-medium">{item.kategori}</td>
+                  <td className="py-6 px-2 text-[#1E1E1E] font-bold">{item.stok_bahan} {item.satuan}</td>
+                  <td className="py-6 px-2">
+                    <span className={`px-5 py-2 rounded-full text-[12px] font-bold 
+                      ${item.stok_bahan >= 5 ? "bg-[#E2F5EA] text-[#22C55E]" : 
+                        item.stok_bahan > 0 ? "bg-[#FFF9E6] text-[#FACC15]" : 
+                        "bg-[#FEE2E2] text-[#EF4444]"}`}>
+                      {item.stok_bahan >= 5 ? "Aman" : item.stok_bahan > 0 ? "Menipis" : "Habis"}
                     </span>
                   </td>
-                  <td className="py-4 text-zinc-500">{row.update}</td>
-                  <td className="py-4 text-right text-zinc-400">
-                    <MoreHorizontal size={18} className="inline cursor-pointer hover:text-zinc-600"/>
+                  <td className="py-6 px-2 text-gray-400 font-medium">
+                    {new Date(item.updated_at || item.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
+                  </td>
+                  <td className="py-6 px-2 text-right relative">
+                    <button onClick={() => setActiveMenu(activeMenu === item.id ? null : item.id)} className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
+                      <MoreHorizontal size={20} className="text-gray-400" />
+                    </button>
+                    {activeMenu === item.id && (
+                      <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-100 rounded-2xl shadow-xl z-50 py-2 overflow-hidden animate-in fade-in slide-in-from-top-1">
+                        <button 
+                          onClick={() => { setSelectedBahan(item); setIsEditOpen(true); setActiveMenu(null); }} 
+                          className="w-full px-4 py-3 text-left text-[13px] font-bold text-gray-700 hover:bg-gray-50 border-b border-gray-50"
+                        >
+                          Penyesuaian Stok
+                        </button>
+                        <button 
+                          onClick={() => handleHapus(item.id)}
+                          className="w-full px-4 py-3 text-left text-[13px] font-bold text-red-500 hover:bg-red-50"
+                        >
+                          Hapus Bahan
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-      </section>
+      </div>
+
+      <TambahBahanModal isOpen={isTambahOpen} onClose={() => setIsTambahOpen(false)} onSave={fetchBahan} />
+      <EditBahanModal isOpen={isEditOpen} onClose={() => setIsEditOpen(false)} onSave={fetchBahan} initialData={selectedBahan} />
     </div>
   );
 }

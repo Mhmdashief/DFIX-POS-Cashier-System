@@ -1,79 +1,248 @@
 "use client";
 
-import { User, Users, UserPlus, Search, Plus, Calendar, MoreHorizontal } from "lucide-react";
-import { StatCard } from "@/components/StatCard";
+import React, { useState, useEffect, useRef } from "react";
+import { 
+  Users, Search, Plus, MoreHorizontal, 
+  UserCheck, UserPlus, Trash2, Edit3, 
+  MapPin, Phone, User, X, Calendar
+} from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
-const customerData = [
-  { no: "01", nama: "Bintang Sakti", hp: "08976257489", alamat: "Jl. Patriot no 26 Kepuh", transaksi: "5", terakhir: "07 Feb 2026 09:12" },
-  { no: "02", nama: "Budi Santoso", hp: "08123456789", alamat: "Jl. Merdeka no 10", transaksi: "50", terakhir: "07 Feb 2026 09:12" },
-  { no: "03", nama: "Andi Wijaya", hp: "08567890123", alamat: "Perum Indah B-12", transaksi: "12", terakhir: "06 Feb 2026 14:00" },
-  { no: "04", nama: "Siti Aminah", hp: "08112233445", alamat: "Jl. Bunga Melati no 5", transaksi: "8", terakhir: "05 Feb 2026 10:30" },
-];
+// --- KOMPONEN MODAL ---
+const ModalPelanggan = ({ isOpen, onClose, onSave, initialData }: any) => {
+  const [formData, setFormData] = useState({ nama: "", hp: "", alamat: "" });
 
-export default function DataPelangganPage() {
+  useEffect(() => {
+    if (initialData) {
+      setFormData({ 
+        nama: initialData.nama || "", 
+        hp: initialData.hp || initialData.telepon || "", 
+        alamat: initialData.alamat || "" 
+      });
+    } else {
+      setFormData({ nama: "", hp: "", alamat: "" });
+    }
+  }, [initialData, isOpen]);
+
+  if (!isOpen) return null;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSave(formData);
+  };
+
   return (
-    <div className="space-y-6">
-      {/* 1. Stats Grid */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <StatCard title="Total Pelanggan" value="50" sub="Total pelanggan terdaftar" icon={Users} colorClass="text-zinc-600 bg-zinc-100" />
-        <StatCard title="Pelanggan Baru" value="10" sub="Baru pertama transaksi" icon={UserPlus} colorClass="text-blue-600 bg-blue-50" />
-        <StatCard title="Pelanggan Aktif" value="10" sub="Sedang melakukan transaksi" icon={User} colorClass="text-green-600 bg-green-50" />
-      </section>
-
-      {/* 2. Controls Section */}
-      <section className="flex flex-col md:flex-row justify-between items-center gap-4">
-        <div>
-            <h2 className="text-lg font-bold text-zinc-900">Data Seluruh Pelanggan</h2>
-            <p className="text-sm text-zinc-500">Mengatur Seluruh Data Pelanggan</p>
+    <div className="fixed inset-0 z-[99] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+      <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-bold text-zinc-900">{initialData ? "Edit Pelanggan" : "Tambah Pelanggan Baru"}</h2>
+          <button onClick={onClose} className="p-2 hover:bg-zinc-100 rounded-full transition-colors text-zinc-400"><X size={20} /></button>
         </div>
-        
-        <div className="flex gap-2 w-full md:w-auto">
-            <button className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white rounded-lg text-sm font-medium hover:bg-zinc-800 transition-colors">
-                <Plus size={18} /> Tambah Pelanggan
-            </button>
-            <div className="relative flex-1 md:w-64">
-                <Search className="absolute left-3 top-2.5 text-zinc-400" size={18} />
-                <input type="text" placeholder="Search" className="w-full pl-10 pr-4 py-2 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-200" />
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-zinc-700">Nama Pelanggan</label>
+            <div className="relative">
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-400" size={18} />
+              <input required className="w-full pl-10 pr-4 py-3 rounded-xl border border-zinc-200 outline-none text-sm focus:border-zinc-400 transition-all" placeholder="Masukkan nama pelanggan" value={formData.nama} onChange={(e) => setFormData({...formData, nama: e.target.value})} />
             </div>
-            <button className="flex items-center gap-2 px-4 py-2 border border-zinc-200 rounded-lg text-sm font-medium hover:bg-zinc-50 transition-colors">
-                <Calendar size={18} /> Filter
-            </button>
-        </div>
-      </section>
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-zinc-700">Nomor HP</label>
+            <div className="relative">
+              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-400" size={18} />
+              <input required className="w-full pl-10 pr-4 py-3 rounded-xl border border-zinc-200 outline-none text-sm focus:border-zinc-400 transition-all" placeholder="089xxxxxxxxx" value={formData.hp} onChange={(e) => setFormData({...formData, hp: e.target.value})} />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-zinc-700">Alamat</label>
+            <div className="relative">
+              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-400" size={18} />
+              <input className="w-full pl-10 pr-4 py-3 rounded-xl border border-zinc-200 outline-none text-sm focus:border-zinc-400 transition-all" placeholder="Masukkan Alamat" value={formData.alamat} onChange={(e) => setFormData({...formData, alamat: e.target.value})} />
+            </div>
+          </div>
+          <div className="flex gap-3 pt-4">
+            <button type="submit" className="flex-1 bg-[#2D4F53] text-white py-3 rounded-xl font-bold hover:bg-[#243f42] transition-all">Simpan</button>
+            <button type="button" onClick={onClose} className="flex-1 bg-white border border-zinc-200 text-zinc-500 py-3 rounded-xl font-bold hover:bg-zinc-50 transition-all">Batal</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
 
-      {/* 3. Table Section */}
-      <section className="bg-white p-6 rounded-2xl border border-zinc-200">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="text-zinc-400 border-b border-zinc-100">
-              <tr>
-                <th className="pb-4 font-medium">No</th>
-                <th className="pb-4 font-medium">Nama</th>
-                <th className="pb-4 font-medium">No Hp</th>
-                <th className="pb-4 font-medium">Alamat</th>
-                <th className="pb-4 font-medium">Total Transaksi</th>
-                <th className="pb-4 font-medium">Terakhir Transaksi</th>
-                <th className="pb-4 font-medium text-right">Aksi</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-100">
-              {customerData.map((row, i) => (
-                <tr key={i} className="hover:bg-zinc-50 transition-colors">
-                  <td className="py-4 text-zinc-500">{row.no}</td>
-                  <td className="py-4 font-medium text-zinc-900">{row.nama}</td>
-                  <td className="py-4 text-zinc-600">{row.hp}</td>
-                  <td className="py-4 text-zinc-600">{row.alamat}</td>
-                  <td className="py-4 text-zinc-600">{row.transaksi}</td>
-                  <td className="py-4 text-zinc-500">{row.terakhir}</td>
-                  <td className="py-4 text-right text-zinc-400">
-                    <MoreHorizontal size={18} className="inline cursor-pointer hover:text-zinc-600"/>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+// --- HALAMAN UTAMA ---
+export default function DataPelangganPage() {
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editData, setEditData] = useState<any>(null);
+  const [activeMenu, setActiveMenu] = useState<string | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const fetchCustomers = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase.from('pelanggan').select('*').order('created_at', { ascending: false });
+      if (error) throw error;
+      setCustomers(data || []);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSave = async (formData: any) => {
+    try {
+      if (editData) {
+        await supabase.from('pelanggan').update(formData).eq('id', editData.id);
+      } else {
+        await supabase.from('pelanggan').insert([formData]);
+      }
+      setIsModalOpen(false);
+      setEditData(null);
+      fetchCustomers();
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (confirm("Apakah anda yakin ingin menghapus data ini?")) {
+      const { error } = await supabase.from('pelanggan').delete().eq('id', id);
+      if (!error) fetchCustomers();
+    }
+  };
+
+  useEffect(() => { fetchCustomers(); }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) setActiveMenu(null);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "-";
+    return new Date(dateString).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+  };
+
+  const filtered = customers.filter(c => (c.nama || "").toLowerCase().includes(searchQuery.toLowerCase()));
+
+  return (
+    <div className="min-h-screen bg-[#FDFDFD] p-4 md:p-8 w-full font-['Plus_Jakarta_Sans',sans-serif]">
+      
+      {/* 1. STATS AREA (DISESUAIKAN DENGAN GAMBAR) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
+        
+        {/* Total Pelanggan */}
+        <div className="bg-white p-6 rounded-2xl border border-zinc-100 flex justify-between items-start shadow-sm h-[135px]">
+          <div className="flex flex-col h-full justify-between">
+            <p className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest">Total Pelanggan</p>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-[32px] font-bold text-[#161616] leading-none">{customers.length}</span>
+              <span className="text-[12px] text-zinc-400 font-bold">/ Pelanggan</span>
+            </div>
+            <p className="text-[11px] font-bold text-[#34C759]">↗ Bertambah</p>
+          </div>
+          <div className="p-3 rounded-xl border border-zinc-50 bg-white text-orange-400 shadow-sm"><Users size={24} /></div>
         </div>
-      </section>
+
+        {/* Pelanggan Baru */}
+        <div className="bg-white p-6 rounded-2xl border border-zinc-100 flex justify-between items-start shadow-sm h-[135px]">
+          <div className="flex flex-col h-full justify-between">
+            <p className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest">Pelanggan Baru</p>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-[32px] font-bold text-[#161616] leading-none">0</span>
+              <span className="text-[12px] text-zinc-400 font-bold">/ Bulan ini</span>
+            </div>
+            <p className="text-[11px] font-bold text-[#34C759]">↗ Update Terkini</p>
+          </div>
+          <div className="p-3 rounded-xl border border-zinc-50 bg-white text-cyan-500 shadow-sm"><UserPlus size={24} /></div>
+        </div>
+
+        {/* Pelanggan Aktif */}
+        <div className="bg-white p-6 rounded-2xl border border-zinc-100 flex justify-between items-start shadow-sm h-[135px]">
+          <div className="flex flex-col h-full justify-between">
+            <p className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest">Pelanggan Aktif</p>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-[32px] font-bold text-[#161616] leading-none">{customers.filter(c => (c.total_order || 0) > 0).length}</span>
+              <span className="text-[12px] text-zinc-400 font-bold">/ Orang</span>
+            </div>
+            <p className="text-[11px] font-bold text-[#34C759]">Status Stabil</p>
+          </div>
+          <div className="p-3 rounded-xl border border-zinc-50 bg-white text-emerald-500 shadow-sm"><UserCheck size={24} /></div>
+        </div>
+      </div>
+
+      {/* HEADER & SEARCH */}
+      <div className="flex flex-col md:flex-row justify-between items-end gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-zinc-900 leading-tight">Data Seluruh Pelanggan</h1>
+          <p className="text-sm text-zinc-400 font-medium">Mengatur Seluruh Data Pelanggan</p>
+        </div>
+        <div className="flex gap-3 w-full md:w-auto">
+          <button 
+            onClick={() => { setEditData(null); setIsModalOpen(true); }} 
+            className="flex items-center gap-2 px-5 py-2.5 border border-zinc-200 rounded-xl text-sm font-bold text-zinc-600 hover:bg-zinc-50 shadow-sm transition-all text-nowrap"
+          >
+            <Plus size={18} className="text-orange-400" /> Tambah Pelanggan
+          </button>
+          <div className="relative flex-1 md:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
+            <input placeholder="Search" className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-zinc-200 outline-none text-sm focus:border-zinc-400 shadow-sm" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+          </div>
+        </div>
+      </div>
+
+      {/* TABLE */}
+      <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm overflow-visible">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="text-zinc-400 text-[11px] font-bold border-b border-zinc-50 uppercase tracking-widest">
+              <th className="py-6 px-6">No</th>
+              <th className="py-6 px-6">Nama</th>
+              <th className="py-6 px-6">No Hp</th>
+              <th className="py-6 px-6">Alamat</th>
+              <th className="py-6 px-6">Total Transaksi</th>
+              <th className="py-6 px-6 text-nowrap">Terakhir Transaksi</th>
+              <th className="py-6 px-6 text-right">Aksi</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-zinc-50">
+            {filtered.map((c, i) => (
+              <tr key={c.id} className="hover:bg-zinc-50/50 transition-colors">
+                <td className="py-4 px-6 text-sm text-zinc-500 font-medium">{i < 9 ? `0${i+1}` : i+1}</td>
+                <td className="py-4 px-6 text-sm font-bold text-zinc-800">{c.nama}</td>
+                <td className="py-4 px-6 text-sm text-zinc-600">{c.hp || c.telepon || "-"}</td>
+                <td className="py-4 px-6 text-sm text-zinc-500 truncate max-w-[150px]">{c.alamat || "-"}</td>
+                <td className="py-4 px-6 text-sm font-bold text-[#161616]">{c.total_order || 0}</td>
+                <td className="py-4 px-6 text-sm text-zinc-600 flex items-center gap-2">
+                  <Calendar size={14} className="text-orange-400" /> {formatDate(c.terakhir_belanja)}
+                </td>
+                <td className="py-4 px-6 text-right relative">
+                  <button onClick={() => setActiveMenu(activeMenu === c.id ? null : c.id)} className="p-2 hover:bg-zinc-100 rounded-lg transition-colors"><MoreHorizontal size={20} className="text-zinc-400" /></button>
+                  
+                  {activeMenu === c.id && (
+                    <div ref={dropdownRef} className="absolute right-6 top-10 w-36 bg-white border border-zinc-100 rounded-xl z-[60] shadow-xl py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+                      <button onClick={() => { setEditData(c); setIsModalOpen(true); setActiveMenu(null); }} className="w-full px-4 py-2 text-left text-xs font-bold text-zinc-600 hover:bg-zinc-50 border-b border-zinc-50">Edit Pelanggan</button>
+                      <button onClick={() => handleDelete(c.id)} className="w-full px-4 py-2 text-left text-xs font-bold text-red-500 hover:bg-red-50">Hapus</button>
+                    </div>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <ModalPelanggan 
+        isOpen={isModalOpen} 
+        initialData={editData}
+        onClose={() => { setIsModalOpen(false); setEditData(null); }} 
+        onSave={handleSave} 
+      />
     </div>
   );
 }
