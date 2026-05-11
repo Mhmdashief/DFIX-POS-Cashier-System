@@ -21,7 +21,6 @@ interface MenuItem {
   sub?: SubItem[];
 }
 
-// 1. Sesuaikan Interface dengan kolom di User_rows.csv
 interface UserData {
   id: string;
   name: string;
@@ -34,20 +33,14 @@ export default function Sidebar({ role }: { role: 'admin' | 'kasir' }) {
   const pathname = usePathname();
   const router = useRouter();
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
-
-  // 2. State untuk User (Default diambil dari data CSV kamu sebagai placeholder)
   const [user, setUser] = useState<UserData | null>(null);
 
   useEffect(() => {
-    // Simulasi pengambilan data dari localStorage setelah login
     const savedUser = localStorage.getItem("user");
     
     if (savedUser) {
       setUser(JSON.parse(savedUser));
     } else {
-      /** * 3. Fallback: Jika belum ada sistem login, 
-       * kita pakai data dari baris pertama file User_rows.csv kamu
-       */
       const defaultUser: UserData = {
         id: "86ca6684-be91-487c-93c2-eb6144b3ce22",
         name: role === 'admin' ? "Admin DFIX" : "Kasir DFIX",
@@ -64,9 +57,9 @@ export default function Sidebar({ role }: { role: 'admin' | 'kasir' }) {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("user"); // Hapus data user
+    localStorage.removeItem("user");
     localStorage.removeItem("token");
-    router.push("/"); // Balik ke Home
+    router.push("/");
     router.refresh();
   };
 
@@ -103,10 +96,19 @@ export default function Sidebar({ role }: { role: 'admin' | 'kasir' }) {
 
   return (
     <aside className="w-64 min-h-screen bg-white border-r border-zinc-200 p-6 flex flex-col sticky top-0">
+      {/* Logo Section */}
       <div className="mb-10 px-2">
-        <Image src="/dfix.png" alt="D'fix Logo" width={120} height={40} className="object-contain" priority />
+        <Image 
+          src="/dfix.png" 
+          alt="D'fix Logo" 
+          width={120} 
+          height={40} 
+          style={{ width: "120px", height: "auto" }} // Memperbaiki warning aspect ratio
+          priority 
+        />
       </div>
 
+      {/* Navigation Section */}
       <nav className="flex-1 space-y-2">
         <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-4 px-2">Main Menu</p>
         {menu.map((item) => (
@@ -123,7 +125,7 @@ export default function Sidebar({ role }: { role: 'admin' | 'kasir' }) {
             ) : (
               <Link 
                 href={item.href || "#"} 
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${pathname === item.href ? "bg-zinc-800 text-white" : "text-zinc-600 hover:bg-zinc-100"}`}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${pathname === item.href ? "bg-zinc-800 text-white shadow-md shadow-zinc-200" : "text-zinc-600 hover:bg-zinc-100"}`}
               >
                 <item.icon size={18} /> {item.name}
               </Link>
@@ -132,7 +134,11 @@ export default function Sidebar({ role }: { role: 'admin' | 'kasir' }) {
             {item.sub && openDropdown === item.name && (
               <div className="pl-10 space-y-1 mt-1 animate-in fade-in slide-in-from-top-2 duration-200">
                 {item.sub.map((sub) => (
-                  <Link key={sub.name} href={sub.href} className={`block py-2 text-sm transition-colors ${pathname === sub.href ? "text-black font-semibold" : "text-zinc-500"} hover:text-black`}>
+                  <Link 
+                    key={sub.name} 
+                    href={sub.href} 
+                    className={`block py-2 text-sm transition-colors ${pathname === sub.href ? "text-black font-bold" : "text-zinc-500"} hover:text-black`}
+                  >
                     {sub.name}
                   </Link>
                 ))}
@@ -142,26 +148,34 @@ export default function Sidebar({ role }: { role: 'admin' | 'kasir' }) {
         ))}
       </nav>
 
-      {/* Bagian Profil User */}
-      <div className="mt-auto border-t pt-6">
-        <button onClick={handleLogout} className="flex items-center gap-3 text-zinc-600 hover:text-red-600 transition-colors mb-6 group w-full text-left">
+      {/* Bottom Section: Profile & Logout */}
+      <div className="mt-auto border-t border-zinc-100 pt-6">
+        <button 
+          onClick={handleLogout} 
+          className="flex items-center gap-3 text-zinc-500 hover:text-red-600 transition-all mb-6 group w-full text-left px-3 py-2 rounded-lg hover:bg-red-50"
+        >
           <LogOut size={18} className="group-hover:translate-x-1 transition-transform" /> 
           <span className="text-sm font-medium">Logout</span>
         </button>
 
-        <div className="flex items-center gap-3 bg-zinc-50 p-2 rounded-xl">
-          <div className="w-10 h-10 rounded-full bg-zinc-200 overflow-hidden flex-shrink-0">
+        {/* PROFILE LINK (Akses ke Info Profil) */}
+        <Link 
+          href="/profil" 
+          className={`flex items-center gap-3 p-2 rounded-2xl transition-all border hover:shadow-sm ${pathname === '/profil' ? 'bg-[#2D4F53]/5 border-[#2D4F53]/10' : 'bg-zinc-50 border-transparent hover:bg-zinc-100'}`}
+        >
+          <div className="w-10 h-10 rounded-full bg-zinc-200 overflow-hidden flex-shrink-0 border-2 border-white">
               <img 
                 src={`https://ui-avatars.com/api/?name=${user?.name || "User"}&background=random`} 
                 alt="Avatar" 
                 className="w-full h-full object-cover"
               />
           </div>
-          <div className="overflow-hidden">
+          <div className="overflow-hidden flex-1">
             <p className="text-sm font-bold text-zinc-800 truncate">{user?.name || "Loading..."}</p>
-            <p className="text-[11px] text-zinc-500 truncate lowercase">{user?.email || "..."}</p>
+            <p className="text-[10px] text-zinc-400 truncate uppercase font-black tracking-tighter">{user?.role || "Staff"}</p>
           </div>
-        </div>
+          <ChevronDown size={14} className="text-zinc-300 -rotate-90 group-hover:text-zinc-500 mr-1" />
+        </Link>
       </div>
     </aside>
   );
