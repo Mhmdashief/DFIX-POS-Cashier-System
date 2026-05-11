@@ -1,204 +1,219 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { 
-  Download, Search, Filter, Package, 
-  AlertTriangle, XCircle, ArrowUpRight, 
-  ChevronDown, MoreHorizontal, History,
-  RefreshCw
+  Download, Search, MoreHorizontal, Filter, 
+  Calendar, ChevronDown, RefreshCw, 
+  ArrowUpRight, ArrowDownLeft, Clock, FileSpreadsheet, FileDown,
+  Package, Inbox, LogOut
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-
-// --- SUB-COMPONENT: StatCard ---
-export function StatCard({ title, value, sub, trend, icon, isNeutral = false }: any) {
-  return (
-    <div className="bg-white p-5 rounded-xl border border-zinc-100 shadow-none flex justify-between items-start h-[135px] w-full">
-      <div className="flex flex-col h-full justify-between">
-        <p className="text-[13px] font-bold text-[#161616] tracking-tight">{title}</p>
-        <div>
-          <div className="flex items-baseline gap-1.5">
-            <span className="text-[26px] font-bold text-[#161616] leading-none">{value}</span>
-            <span className="text-[11px] text-zinc-400 font-bold">{sub}</span>
-          </div>
-          <p className={`text-[11px] mt-2 flex items-center gap-1 font-bold ${isNeutral ? 'text-zinc-400' : 'text-[#34C759]'}`}>
-            {!isNeutral && <ArrowUpRight size={14} strokeWidth={3} />} {trend}
-          </p>
-        </div>
-      </div>
-      <div className="p-2.5 rounded-lg border border-zinc-50 bg-white flex items-center justify-center text-[#F2C94C]">
-        {icon}
-      </div>
-    </div>
-  );
-}
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
 
 export default function LaporanBahanPage() {
-  const [bahan, setBahan] = useState<any[]>([]);
+  const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [openExport, setOpenExport] = useState(false);
+  
+  const [filterType, setFilterType] = useState("Semua");
 
-  // --- FETCH DATA DARI SUPABASE ---
-  const fetchLaporanBahan = async () => {
+  const exportRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    fetchRiwayat();
+  }, []);
+
+  const fetchRiwayat = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('stok_bahan')
+      const { data: logs, error } = await supabase
+        .from('riwayat_bahan') 
         .select('*')
-        .order('nama_bahan', { ascending: true });
-
+        .order('tanggal', { ascending: false });
+      
       if (error) throw error;
-      setBahan(data || []);
+      setData(logs || []);
     } catch (error: any) {
-      console.error("Error fetching report:", error.message);
+      console.error("Error:", error.message);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchLaporanBahan();
+    const handleClickOutside = (event: MouseEvent) => {
+      if (exportRef.current && !exportRef.current.contains(event.target as Node)) {
+        setOpenExport(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // --- FILTER SEARCH ---
-  const filteredBahan = bahan.filter(b => 
-    b.nama_bahan.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredData = data.filter(item => {
+    const search = searchQuery.toLowerCase();
+    const matchSearch = (item.bahan?.toLowerCase() || "").includes(search) || (item.ref?.toLowerCase() || "").includes(search);
+    const matchType = filterType === "Semua" || item.type === filterType;
+    return matchSearch && matchType;
+  });
 
-  // --- LOGIKA STATUS & KALKULASI ---
-  const stokMenipis = bahan.filter(b => b.stok_sisa > 0 && b.stok_sisa < 5).length;
-  const stokKosong = bahan.filter(b => b.stok_sisa <= 0).length;
-  const totalPemakaian = bahan.reduce((acc, curr) => acc + (curr.stok_keluar || 0), 0);
-
-  const getStatusInfo = (sisa: number) => {
-    if (sisa <= 0) return { label: "Habis", class: "bg-[#F5E4E2] text-[#F54336]" };
-    if (sisa < 5) return { label: "Menipis", class: "bg-[#FFF4E5] text-[#FFB020]" };
-    return { label: "Aman", class: "bg-[#CEECD6] text-[#34C759]" };
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+    doc.text("LAPORAN RIWAYAT BAHAN", 14, 15);
+    autoTable(doc, {
+      startY: 25,
+      head: [["Tanggal", "Bahan", "Varian", "Kategori", "Type", "Qty", "Ref"]],
+      body: filteredData.map(i => [
+        new Date(i.tanggal).toLocaleDateString('id-ID'),
+        i.bahan, i.varian || "-", i.kategori || "-", i.type, i.qty, i.ref || "-"
+      ]),
+      headStyles: { fillColor: [45, 79, 83] }
+    });
+    doc.save(`Laporan_Bahan.pdf`);
+    setOpenExport(false);
   };
 
   return (
-    <div className="min-h-screen bg-[#FDFDFD] p-4 md:p-6 w-full font-['Plus_Jakarta_Sans',sans-serif]">
-      <div className="w-full space-y-6">
+    <div className="min-h-screen bg-[#FDFDFD] p-6 md:p-8 w-full font-sans text-[#161616]">
+      <div className="max-w-7xl mx-auto space-y-6">
         
-        {/* --- HEADER --- */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h1 className="text-[22px] font-bold text-[#161616]">Laporan Stok & Bahan</h1>
-            <p className="text-[13px] text-zinc-400 mt-1">Pantau perputaran stok material reparasi dan cuci</p>
-          </div>
-          <button className="flex items-center gap-2 px-5 py-2.5 bg-zinc-900 text-white rounded-lg text-[13px] font-bold hover:bg-zinc-800 transition-all shadow-none">
-            <Download size={18} /> Ekspor Data Stok
-          </button>
-        </div>
-
-        {/* --- STATS SECTION --- */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
+        {/* STATS SECTION (SESUAI GAMBAR) */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
           <StatCard 
-            title="Total Jenis Bahan" 
-            value={bahan.length} 
-            sub="/ Jenis" 
-            trend="Data real-time" 
-            isNeutral
-            icon={<Package size={18} />} 
+            title="Total Bahan" 
+            value={data.length} 
+            trend="Item tercatat" 
+            icon={<Package size={22} className="text-[#F2C94C]" />} 
           />
           <StatCard 
-            title="Pemakaian Stok" 
-            value={totalPemakaian} 
-            sub="/ Item Keluar" 
-            trend="Kumulatif penggunaan" 
-            icon={<History size={18} />} 
+            title="Bahan Masuk" 
+            value={data.filter(d => d.type === 'Masuk').length} 
+            trend="Total restock" 
+            icon={<Inbox size={22} className="text-emerald-500" />} 
           />
           <StatCard 
-            title="Stok Menipis" 
-            value={stokMenipis} 
-            sub="/ Perlu Order" 
-            trend="Segera cek gudang" 
-            isNeutral 
-            icon={<AlertTriangle size={18} />} 
-          />
-          <StatCard 
-            title="Stok Kosong" 
-            value={stokKosong} 
-            sub="/ Habis" 
-            trend="Restock segera!" 
-            icon={<XCircle size={18} />} 
+            title="Bahan Keluar" 
+            value={data.filter(d => d.type === 'Keluar').length} 
+            trend="Total digunakan" 
+            icon={<LogOut size={22} className="text-orange-500" />} 
+            isPositive={false}
           />
         </div>
 
-        {/* --- TABLE SECTION --- */}
-        <div className="bg-white rounded-xl border border-zinc-100 shadow-none w-full overflow-hidden">
-          
-          <div className="p-6 pb-4 flex flex-col lg:flex-row justify-between items-center gap-4 border-b border-zinc-50">
-            <div className="relative w-full lg:w-96">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
-              <input 
-                type="text" 
-                placeholder="Cari nama bahan..." 
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-zinc-200 text-[13px] focus:outline-none focus:border-zinc-400 shadow-none"
-              />
-            </div>
-            
-            <div className="flex items-center gap-2 w-full lg:w-auto justify-end">
-              <button 
-                onClick={fetchLaporanBahan}
-                className="p-2.5 rounded-lg border border-zinc-200 text-zinc-500 hover:bg-zinc-50 transition-all"
-              >
-                <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
-              </button>
-              <button className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-zinc-200 text-[13px] font-bold text-zinc-600 hover:bg-zinc-50">
-                Urutkan <ChevronDown size={14} />
-              </button>
+        {/* TABLE SECTION */}
+        <div className="bg-white rounded-[24px] border border-zinc-100 w-full overflow-hidden shadow-sm">
+          <div className="p-8 pb-6">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 text-left">
+              <div>
+                <h1 className="text-[20px] font-black tracking-tight text-[#2D4F53]">Laporan Riwayat Bahan</h1>
+                <p className="text-[12px] text-zinc-400 mt-1 italic font-medium">Monitoring arus keluar masuk material</p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="relative w-full sm:w-45">
+                  <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#F2C94C]" />
+                  <input 
+                    type="text" 
+                    placeholder="Cari bahan..." 
+                    className="w-full pl-9 pr-4 py-2 rounded-xl border border-zinc-200 text-[12px] font-medium focus:outline-none" 
+                    onChange={(e) => setSearchQuery(e.target.value)} 
+                  />
+                </div>
+
+                <div className="relative">
+                  <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="appearance-none pl-9 pr-8 py-2 bg-white border border-zinc-200 rounded-xl text-[12px] font-bold text-zinc-600 focus:outline-none cursor-pointer">
+                    <option value="Semua">Semua Tipe</option>
+                    <option value="Masuk">Masuk</option>
+                    <option value="Keluar">Keluar</option>
+                  </select>
+                  <Filter size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
+                  <ChevronDown size={12} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
+                </div>
+
+                <div className="relative" ref={exportRef}>
+                  <button 
+                    onClick={() => setOpenExport(!openExport)}
+                    className="flex items-center gap-2 px-4 py-2 bg-[#2D4F53] text-white rounded-xl text-[12px] font-bold hover:opacity-90 transition-opacity"
+                  >
+                    Export <Download size={14} />
+                  </button>
+                  
+                  {openExport && (
+                    <div className="absolute right-0 mt-2 w-40 bg-white border border-zinc-100 rounded-2xl z-100 py-2 shadow-2xl">
+                      <button onClick={exportToPDF} className="w-full text-left px-4 py-2 text-[12px] font-bold text-zinc-600 hover:bg-zinc-50 flex items-center gap-2">
+                        <FileDown size={14} className="text-red-500" /> PDF
+                      </button>
+                      <button onClick={fetchRiwayat} className="w-full text-left px-4 py-2 text-[12px] font-bold text-zinc-400 hover:bg-zinc-50 flex items-center gap-2">
+                        <RefreshCw size={14} /> Refresh
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="overflow-x-auto w-full">
-            {loading ? (
-              <div className="py-20 text-center text-zinc-400 text-[13px]">Memuat laporan stok...</div>
-            ) : (
-              <table className="w-full text-left border-separate border-spacing-0">
-                <thead>
-                  <tr className="text-zinc-400 text-[13px] font-medium bg-zinc-50/30">
-                    <th className="py-4 px-6 border-b border-zinc-50">Nama Bahan</th>
-                    <th className="py-4 px-6 border-b border-zinc-50 text-center">Masuk</th>
-                    <th className="py-4 px-6 border-b border-zinc-50 text-center">Keluar</th>
-                    <th className="py-4 px-6 border-b border-zinc-50 text-center">Sisa Stok</th>
-                    <th className="py-4 px-6 border-b border-zinc-50 text-center">Status</th>
-                    <th className="py-4 px-6 border-b border-zinc-50 text-right">Aksi</th>
+          <div className="overflow-x-auto min-h-100">
+            <table className="w-full text-left border-separate border-spacing-0">
+              <thead>
+                <tr className="text-zinc-400 text-[11px] font-bold bg-zinc-50/50 uppercase tracking-widest border-b border-zinc-50">
+                  <th className="py-4 px-8 border-b border-zinc-50">Tanggal</th>
+                  <th className="py-4 px-8 border-b border-zinc-50">Bahan</th>
+                  <th className="py-4 px-8 border-b border-zinc-50">Varian</th>
+                  <th className="py-4 px-8 border-b border-zinc-50">Kategori</th>
+                  <th className="py-4 px-8 border-b border-zinc-50 text-center">Type</th>
+                  <th className="py-4 px-8 border-b border-zinc-50 text-center">Qty</th>
+                  <th className="py-4 px-8 border-b border-zinc-50">Ref</th>
+                  <th className="py-4 px-8 border-b border-zinc-50 text-right">Aksi</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-50">
+                {loading ? (
+                  <tr><td colSpan={8} className="py-20 text-center text-zinc-400 italic">Memuat...</td></tr>
+                ) : filteredData.map((item) => (
+                  <tr key={item.id} className="hover:bg-zinc-50/50 transition-colors">
+                    <td className="py-5 px-8 text-[13px] text-zinc-500 font-medium">
+                      {new Date(item.tanggal).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </td>
+                    <td className="py-5 px-8 text-[13px] text-zinc-900 font-black">{item.bahan}</td>
+                    <td className="py-5 px-8 text-[13px] text-zinc-600 font-bold">{item.varian || '-'}</td>
+                    <td className="py-5 px-8 text-[12px] text-zinc-400 font-bold uppercase">{item.kategori}</td>
+                    <td className="py-5 px-8 text-center">
+                      <span className={`px-4 py-1.5 rounded-full text-[10px] font-black border ${item.type === 'Masuk' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-orange-50 text-orange-600 border-orange-100'}`}>
+                        {item.type?.toUpperCase()}
+                      </span>
+                    </td>
+                    <td className={`py-5 px-8 text-center text-[13px] font-black ${item.type === 'Masuk' ? 'text-emerald-600' : 'text-orange-600'}`}>
+                      {item.type === 'Masuk' ? '+' : '-'}{item.qty}
+                    </td>
+                    <td className="py-5 px-8 text-[12px] text-zinc-400 font-medium italic">{item.ref || '-'}</td>
+                    <td className="py-5 px-8 text-right">
+                      <MoreHorizontal size={20} className="text-zinc-400 cursor-pointer inline-block" />
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-50">
-                  {filteredBahan.length === 0 ? (
-                    <tr><td colSpan={6} className="py-20 text-center text-zinc-400 italic text-[13px]">Data laporan tidak ditemukan.</td></tr>
-                  ) : filteredBahan.map((item) => {
-                    const status = getStatusInfo(item.stok_sisa);
-                    return (
-                      <tr key={item.id} className="hover:bg-zinc-50/50 transition-colors group">
-                        <td className="py-5 px-6">
-                          <p className="text-[14px] font-bold text-zinc-800 tracking-tight">{item.nama_bahan}</p>
-                          <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-tighter">ID: {item.id.substring(0, 8)}</p>
-                        </td>
-                        <td className="py-5 px-6 text-center text-[14px] text-zinc-600 font-medium">{item.stok_masuk} {item.satuan}</td>
-                        <td className="py-5 px-6 text-center text-[14px] text-zinc-600 font-medium">{item.stok_keluar} {item.satuan}</td>
-                        <td className="py-5 px-6 text-center text-[14px] font-extrabold text-zinc-900">{item.stok_sisa} {item.satuan}</td>
-                        <td className="py-5 px-6 text-center">
-                          <span className={`px-4 py-1 rounded-full text-[11px] font-bold ${status.class}`}>
-                            {status.label}
-                          </span>
-                        </td>
-                        <td className="py-5 px-6 text-right">
-                          <button className="p-2 hover:bg-zinc-100 rounded-lg transition-colors">
-                            <MoreHorizontal size={20} className="text-zinc-400 group-hover:text-zinc-800" />
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )}
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function StatCard({ title, value, trend, icon, isPositive = true }: any) {
+  return (
+    <div className="bg-white p-7 rounded-[32px] border border-zinc-100 flex justify-between items-center shadow-sm hover:shadow-md transition-shadow">
+      <div className="text-left space-y-1">
+        <p className="text-[11px] font-black text-zinc-400 uppercase tracking-widest leading-none">{title}</p>
+        <h3 className="text-[28px] font-black text-[#161616] tracking-tighter">{value}</h3>
+        <p className={`text-[11px] font-bold ${isPositive ? 'text-emerald-500' : 'text-orange-500'}`}>{trend}</p>
+      </div>
+      <div className="w-14 h-14 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-center justify-center shadow-inner">
+        {icon}
       </div>
     </div>
   );

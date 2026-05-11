@@ -1,303 +1,195 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { 
-  ChevronLeft, User, Edit3, Wrench, 
-  Box, FileText, CreditCard, ChevronDown 
+  User, FileText, LayoutList, CreditCard, 
+  Package, Edit3, Calendar, Clock, ChevronLeft 
 } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
-// -- Helper untuk format Rupiah --
-const formatIDR = (amount: number) => {
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    minimumFractionDigits: 0,
-  }).format(amount).replace("Rp", "Rp ");
-};
+const formatIDR = (n: number) => 
+  new Intl.NumberFormat("id-ID", { 
+    style: "currency", 
+    currency: "IDR", 
+    minimumFractionDigits: 0 
+  }).format(n).replace("Rp", "Rp");
 
-interface Material {
-  name: string;
-  qty: number;
-  unit: string;
-}
+export default function DetailTransaksiView({ id }: { id: string }) {
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-interface ServiceItem {
-  id: number;
-  category: string;
-  subCategory: string;
-  description: string;
-  price: number;
-}
+  useEffect(() => {
+    const fetchDetail = async () => {
+      setLoading(true);
+      const { data: res } = await supabase
+        .from('transaksi')
+        .select('*')
+        .eq('id', id)
+        .single();
+      setData(res);
+      setLoading(false);
+    };
+    if (id) fetchDetail();
+  }, [id]);
 
-interface TransactionData {
-  invoiceCode: string;
-  customerName: string;
-  phone: string;
-  address: string;
-  entryDate: string;
-  estimationDate: string;
-  statusWork: string;
-  statusPayment: string;
-  paymentMethod: string;
-  totalPrice: number;
-  dpPaid: number;
-  remainingBill: number;
-  materials?: Material[]; // Opsional agar tidak error jika undefined
-  services?: ServiceItem[]; // Opsional agar tidak error jika undefined
-}
-
-interface DetailTransaksiViewProps {
-  data: TransactionData;
-  onBack: () => void;
-  onEditGeneral?: () => void;
-  onEditMaterials?: () => void;
-  onEditServices?: () => void;
-}
-
-export default function DetailTransaksiView({ 
-  data, 
-  onBack,
-  onEditGeneral,
-  onEditMaterials,
-  onEditServices 
-}: DetailTransaksiViewProps) {
+  if (loading) return (
+    <div className="flex h-[60vh] items-center justify-center">
+      <div className="animate-pulse font-bold text-zinc-400 uppercase tracking-widest">Memuat Detail...</div>
+    </div>
+  );
   
-  // Guard clause jika data utama belum ada
-  if (!data) return <div className="p-10 text-center font-bold text-[#161616]">Memuat data transaksi...</div>;
-
-  // Safety check untuk array agar tidak TypeError
-  const services = data.services || [];
-  const materials = data.materials || [];
+  if (!data) return <div className="p-20 text-center text-red-500 font-bold">Data tidak ditemukan</div>;
 
   return (
-    <div className="w-full flex flex-col items-start gap-[10px] font-['Plus_Jakarta_Sans'] animate-in fade-in duration-500">
+    <div className="w-full bg-[#FDFDFD] min-h-screen">
       
-      {/* Back Button */}
-      <button 
-        onClick={onBack}
-        className="flex items-center gap-2 text-black/40 hover:text-black transition-colors font-bold text-sm mb-2"
-      >
-        <ChevronLeft size={20} />
-        Kembali ke Daftar Transaksi
-      </button>
+      {/* HEADER DETAIL (Sub-header di bawah Navbar Utama) */}
+      <div className="mb-8">
+        <h2 className="text-[24px] font-bold text-[#161616]">Detail Transaksi</h2>
+        <p className="text-[13px] text-zinc-400 font-medium">
+          menampilkan informasi lengkap transaksi serta menyediakan aksi lanjutan seperti pencetakan nota
+        </p>
+      </div>
 
-      {/* --- HEADER SECTION --- */}
-      <div className="w-full self-stretch p-5 bg-white rounded-[12px] border border-[#E8E8E8] flex flex-row items-center justify-between">
-        <div className="flex items-center gap-[16px]">
-          <div className="p-[10px] rounded-[5px] border border-[#E8E8E8] flex items-center justify-center">
-            <User className="text-[#161616]" size={20} strokeWidth={2} />
+      {/* 1. TOP INFO BAR (Horizontal Cards) */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 bg-white p-6 rounded-2xl border border-zinc-100 shadow-sm items-center">
+        <div className="flex items-center gap-4 border-r border-zinc-50">
+          <div className="w-12 h-12 bg-zinc-50 rounded-xl flex items-center justify-center text-zinc-400 border border-zinc-100">
+            <User size={20} />
           </div>
-          <div className="flex flex-col gap-1">
-            <div className="text-black text-[16px] font-bold">{data.customerName || "-"}</div>
-            <div className="text-black/40 text-[14px] font-medium italic">
-              {services.length > 0 
-                ? `${services[0].category} • ${services[0].subCategory}` 
-                : "Tidak ada layanan"}
-            </div>
+          <div>
+            <p className="text-[14px] font-bold text-[#161616]">{data.nama_pelanggan}</p>
+            <p className="text-[11px] text-zinc-400 font-bold uppercase tracking-tight">Reparasi • {data.kategori}</p>
           </div>
         </div>
-
-        <div className="h-12 w-px bg-[#E8E8E8] hidden md:block" />
-
-        <div className="hidden md:flex flex-col justify-center gap-1">
-          <div className="text-black text-[16px] font-bold">Kode</div>
-          <div className="text-black/40 text-[15px] font-medium font-mono">{data.invoiceCode}</div>
+        
+        <div className="flex flex-col justify-center px-4 border-r border-zinc-50">
+          <p className="text-[11px] text-zinc-400 font-bold uppercase mb-1">Kode</p>
+          <p className="text-[14px] font-bold text-[#161616]">TRX-{data.id}</p>
         </div>
 
-        <div className="h-12 w-px bg-[#E8E8E8] hidden md:block" />
-
-        <div className="hidden md:flex flex-col justify-center gap-1">
-          <div className="text-black text-[16px] font-bold">Kategori & Jasa</div>
-          <div className="text-black/40 text-[15px] font-medium">
-             {services.length} Layanan Terdaftar
-          </div>
+        <div className="flex flex-col justify-center px-4 border-r border-zinc-50">
+          <p className="text-[11px] text-zinc-400 font-bold uppercase mb-1">Kategori & Jasa</p>
+          <p className="text-[14px] font-bold text-[#161616]">{data.kategori} • {data.jenis_jasa}</p>
         </div>
 
-        <div className="h-12 w-px bg-[#E8E8E8]" />
-
-        <div className="flex flex-col justify-center gap-1">
-          <div className="text-black text-[16px] font-bold">Status</div>
+        <div className="flex flex-col justify-center px-4">
+          <p className="text-[11px] text-zinc-400 font-bold uppercase mb-1">Status</p>
           <div className="flex items-center gap-2">
-            <div className="px-3 py-1 bg-[#FFC02D]/10 rounded-[12px] border border-[#FFC02D]/10">
-              <span className="text-[#FFC02D] text-[13px] font-bold">{data.statusWork}</span>
-            </div>
-            <span className="text-black/20 font-bold">•</span>
-            <div className="px-3 py-1 bg-[#00A9F1]/10 rounded-[12px] border border-[#00A9F1]/10">
-              <span className="text-[#00A9F1] text-[13px] font-bold uppercase">{data.statusPayment}</span>
-            </div>
+            <span className="px-3 py-1 bg-yellow-50 text-yellow-600 rounded-full text-[10px] font-black uppercase tracking-wider">
+                {data.status || 'Diproses'}
+            </span>
+            <span className="text-zinc-200">•</span>
+            <span className="px-3 py-1 bg-[#E0F2FE] text-[#00A9F1] rounded-full text-[10px] font-black uppercase tracking-wider italic">
+                DP Bayar
+            </span>
           </div>
         </div>
       </div>
 
-      {/* --- CONTENT AREA --- */}
-      <div className="w-full self-stretch flex flex-col lg:flex-row items-start gap-[10px]">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 pb-20">
         
         {/* KOLOM KIRI */}
-        <div className="flex-1 w-full p-[30px] bg-white rounded-[12px] border border-[#E8E8E8] flex flex-col gap-8">
-          
-          {/* Informasi Umum */}
-          <div className="flex flex-col gap-6">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <User size={20} className="text-[#161616]" strokeWidth={2.5} />
-                <span className="text-[#161616] text-[18px] font-bold tracking-tight">Informasi Umum</span>
+        <div className="space-y-8">
+          {/* Section: Informasi Umum */}
+          <div className="bg-white rounded-2xl border border-zinc-100 p-7 shadow-sm">
+            <div className="flex justify-between items-center mb-8">
+              <div className="flex items-center gap-3 font-bold text-[15px]">
+                <FileText size={18} className="text-[#2D4F53]" /> Informasi Umum
               </div>
-              <button onClick={onEditGeneral} className="px-4 py-2 rounded-[10px] border border-black/10 flex items-center gap-2 hover:bg-zinc-50 transition-all active:scale-95">
-                <Edit3 size={16} className="text-[#F2C94C]" />
-                <span className="text-[#161616] text-[11px] font-bold uppercase tracking-widest">Edit</span>
+              <button className="flex items-center gap-2 text-[11px] font-bold text-zinc-400 border border-zinc-100 px-4 py-2 rounded-xl hover:bg-zinc-50 transition-all">
+                <Edit3 size={13} /> Edit Information
               </button>
             </div>
-            <div className="flex flex-col gap-4">
-              <div className="flex justify-between text-[15px]">
-                <span className="text-black/40 font-medium">Tanggal Masuk</span>
-                <span className="text-[#161616] font-bold w-[220px]">: {data.entryDate}</span>
-              </div>
-              <div className="flex justify-between text-[15px]">
-                <span className="text-black/40 font-medium">Estimasi Selesai</span>
-                <span className="text-[#161616] font-bold w-[220px]">: {data.estimationDate}</span>
-              </div>
-              <div className="flex justify-between items-center text-[15px]">
-                <span className="text-black/40 font-medium">Status Pengerjaan</span>
-                <div className="w-[220px] flex items-center gap-2">
-                  <span className="text-[#161616] font-bold">:</span>
-                  <div className="px-3 py-1 bg-[#FFC02D]/10 rounded-[12px] flex items-center gap-2 border border-[#FFC02D]/20 cursor-pointer">
-                    <span className="text-[#FFC02D] font-bold text-[13px]">{data.statusWork}</span>
-                    <ChevronDown size={14} className="text-[#FFC02D]" />
-                  </div>
-                </div>
-              </div>
+            
+            <div className="space-y-5 text-[13px] border-b border-zinc-50 pb-8 mb-8">
+               <div className="flex justify-between"><span className="text-zinc-400 font-bold tracking-wide">Tanggal Masuk</span><span className="font-bold text-[#161616]">: {data.tanggal}</span></div>
+               <div className="flex justify-between"><span className="text-zinc-400 font-bold tracking-wide">Estimasi Selesai</span><span className="font-bold text-[#161616]">: {data.tanggal}</span></div>
+               <div className="flex justify-between items-center"><span className="text-zinc-400 font-bold tracking-wide">Status Pengerjaan</span><span className="font-bold text-yellow-500 italic">: {data.status || 'Diproses'}</span></div>
+            </div>
+
+            <div className="flex items-center gap-3 font-bold text-[15px] mb-6">
+                <User size={18} className="text-[#2D4F53]" /> Data Pelanggan
+            </div>
+            <div className="space-y-5 text-[13px]">
+               <div className="flex justify-between"><span className="text-zinc-400 font-bold tracking-wide">Nama</span><span className="font-bold text-[#161616]">: {data.nama_pelanggan}</span></div>
+               <div className="flex justify-between"><span className="text-zinc-400 font-bold tracking-wide">No HP</span><span className="font-bold text-[#161616]">: {data.nomor_hp}</span></div>
+               <div className="flex justify-between"><span className="text-zinc-400 font-bold tracking-wide">Alamat</span><span className="font-bold text-[#161616]">: {data.alamat}</span></div>
             </div>
           </div>
 
-          <div className="h-px bg-[#E8E8E8]" />
-
-          {/* Data Pelanggan */}
-          <div className="flex flex-col gap-6">
-            <div className="flex items-center gap-2">
-              <Wrench size={20} className="text-[#161616]" strokeWidth={2.5} />
-              <span className="text-[#161616] text-[18px] font-bold tracking-tight">Data Pelanggan</span>
-            </div>
-            <div className="flex flex-col gap-4 text-[15px]">
-              <div className="flex justify-between">
-                <span className="text-black/40 font-medium">Nama</span>
-                <span className="text-[#161616] font-bold w-[220px]">: {data.customerName}</span>
+          {/* Section: Bahan Digunakan */}
+          <div className="bg-white rounded-2xl border border-zinc-100 p-7 shadow-sm">
+            <div className="flex justify-between items-center mb-8">
+              <div className="flex items-center gap-3 font-bold text-[15px]">
+                <Package size={18} className="text-[#2D4F53]" /> Bahan Digunakan
               </div>
-              <div className="flex justify-between">
-                <span className="text-black/40 font-medium">No HP</span>
-                <span className="text-[#161616] font-bold w-[220px] font-mono">: {data.phone}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-black/40 font-medium">Alamat</span>
-                <span className="text-[#161616] font-bold w-[220px]">: {data.address}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="h-px bg-[#E8E8E8]" />
-
-          {/* Bahan Digunakan */}
-          <div className="flex flex-col gap-6">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <Box size={20} className="text-[#161616]" strokeWidth={2.5} />
-                <span className="text-[#161616] text-[18px] font-bold tracking-tight">Bahan Digunakan</span>
-              </div>
-              <button onClick={onEditMaterials} className="px-4 py-2 rounded-[10px] border border-black/10 flex items-center gap-2 hover:bg-zinc-50 transition-all active:scale-95">
-                <Edit3 size={16} className="text-[#F2C94C]" />
-                <span className="text-[#161616] text-[11px] font-bold uppercase tracking-widest">Edit</span>
+              <button className="flex items-center gap-2 text-[11px] font-bold text-zinc-400 border border-zinc-100 px-4 py-2 rounded-xl">
+                <Edit3 size={13} /> Edit Information
               </button>
             </div>
-            <div className="flex flex-col gap-4 text-[15px]">
-              {materials.length > 0 ? materials.map((item, idx) => (
-                <div key={idx} className="flex justify-between">
-                  <span className="text-black/60 font-medium">{item.name}</span>
-                  <span className="text-[#161616] font-bold w-[220px]">: {item.qty} {item.unit}</span>
-                </div>
-              )) : (
-                <span className="text-black/30 italic text-sm">Tidak ada bahan yang digunakan</span>
-              )}
+            <div className="space-y-5 text-[13px]">
+               <div className="flex justify-between"><span className="text-zinc-400 font-bold tracking-wide uppercase text-[11px]">Bahan/Material</span><span className="font-bold text-[#161616]">Qty</span></div>
+               <div className="flex justify-between"><span className="font-bold text-zinc-500 italic">Otomatis dari sistem...</span><span className="font-bold text-[#161616]">-</span></div>
             </div>
           </div>
         </div>
 
         {/* KOLOM KANAN */}
-        <div className="flex-1 w-full p-[30px] bg-white rounded-[12px] border border-[#E8E8E8] flex flex-col justify-between min-h-[700px]">
+        <div className="space-y-8">
           
-          <div className="flex flex-col gap-8">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <FileText size={20} className="text-[#161616]" strokeWidth={2.5} />
-                <span className="text-[#161616] text-[18px] font-bold tracking-tight">Layanan</span>
+          {/* Section: Layanan */}
+          <div className="bg-white rounded-2xl border border-zinc-100 p-7 shadow-sm">
+            <div className="flex justify-between items-center mb-8">
+              <div className="flex items-center gap-3 font-bold text-[15px]">
+                <LayoutList size={18} className="text-[#2D4F53]" /> Layanan
               </div>
-              <button onClick={onEditServices} className="px-4 py-2 rounded-[10px] border border-black/10 flex items-center gap-2 hover:bg-zinc-50 transition-all active:scale-95">
-                <Edit3 size={16} className="text-[#F2C94C]" />
-                <span className="text-[#161616] text-[11px] font-bold uppercase tracking-widest">Edit</span>
+              <button className="flex items-center gap-2 text-[11px] font-bold text-zinc-400 border border-zinc-100 px-4 py-2 rounded-xl">
+                <Edit3 size={13} /> Edit Information
               </button>
             </div>
-
-            <div className="flex flex-col gap-6">
-              {services.map((service, idx) => (
-                <div key={service.id || idx} className={`flex justify-between items-start ${idx !== services.length - 1 ? 'pb-6 border-b border-[#E8E8E8]' : ''}`}>
-                  <div className="flex gap-4">
-                    <span className="text-[#161616] font-bold text-base">{idx + 1}.</span>
-                    <div>
-                      <div className="text-[#161616] font-bold text-base">{service.category} - {service.subCategory}</div>
-                      <div className="text-black/40 text-[13px] italic mt-1 font-medium leading-relaxed max-w-[250px]">
-                        {service.description}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-[#161616] font-bold text-base w-[120px] text-right">
-                    {formatIDR(service.price)}
-                  </div>
+            
+            <div className="space-y-6">
+              <div className="flex justify-between items-start">
+                <div className="space-y-1.5">
+                  <p className="text-[14px] font-bold text-[#161616]">1. {data.kategori} - {data.jenis_jasa}</p>
+                  <p className="text-[12px] text-zinc-400 font-bold italic ml-4 leading-relaxed max-w-[280px]">
+                    {data.kendala || 'Tidak ada catatan kerusakan spesifik'}
+                  </p>
                 </div>
-              ))}
-              {services.length === 0 && <div className="text-center py-10 text-black/30">Belum ada layanan dipilih</div>}
+                <span className="text-[15px] font-black text-[#161616]">{formatIDR(data.total_bayar)}</span>
+              </div>
             </div>
           </div>
 
-          {/* Bagian Pembayaran */}
-          <div className="flex flex-col gap-5 pt-8">
-            <div className="h-px bg-[#E8E8E8] w-full" />
-            <div className="flex items-center gap-2 mb-2">
-              <CreditCard size={20} className="text-[#161616]" strokeWidth={2.5} />
-              <span className="text-[#161616] text-[16px] font-bold tracking-tight">Pembayaran</span>
+          {/* Section: Pembayaran */}
+          <div className="bg-white rounded-2xl border border-zinc-100 p-7 shadow-sm">
+            <div className="flex items-center gap-3 font-bold text-[15px] mb-8">
+                <CreditCard size={18} className="text-[#2D4F53]" /> Pembayaran
             </div>
             
-            <div className="flex flex-col gap-4 text-[15px]">
-              <div className="flex justify-between items-center">
-                <span className="text-black/40 font-medium">Status Transaksi</span>
-                <div className="w-[180px] flex items-center gap-2">
-                  <span className="text-[#161616] font-bold">:</span>
-                  <div className="px-3 py-1 bg-[#00A9F1]/10 rounded-[12px] border border-[#00A9F1]/10">
-                    <span className="text-[#00A9F1] font-bold text-[11px] uppercase">{data.statusPayment}</span>
-                  </div>
-                </div>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-black/40 font-medium">Metode Pembayaran</span>
-                <span className="text-[#161616] font-bold w-[180px]">: {data.paymentMethod}</span>
-              </div>
-              <div className="h-px bg-[#E8E8E8]/50 w-full" />
-              <div className="flex justify-between">
-                <span className="text-black/60 font-medium text-sm">Total Harga</span>
-                <span className="text-[#161616] font-bold w-[180px]">: {formatIDR(data.totalPrice || 0)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-black/60 font-medium text-sm">DP Dibayar</span>
-                <span className="text-[#161616] font-bold w-[180px]">: {formatIDR(data.dpPaid || 0)}</span>
-              </div>
-              <div className="h-px bg-[#E8E8E8] w-full mt-2" />
-              <div className="flex justify-between items-center pt-2">
-                <span className="text-[#161616] font-bold text-[16px]">Total Sisa Tagihan</span>
-                <span className="text-[#161616] font-black text-[24px] w-[180px] text-left leading-none tracking-tighter">
-                  {formatIDR(data.remainingBill || 0)}
-                </span>
-              </div>
+            <div className="space-y-5 text-[13px] border-b border-zinc-50 pb-8 mb-8">
+               <div className="flex justify-between items-center">
+                 <span className="text-zinc-400 font-bold tracking-wide">Status Transaksi</span>
+                 <span className="px-4 py-1.5 bg-[#E0F2FE] text-[#00A9F1] rounded-xl text-[10px] font-black uppercase italic tracking-wider">DP Bayar</span>
+               </div>
+               <div className="flex justify-between"><span className="text-zinc-400 font-bold tracking-wide">Metode Pembayaran</span><span className="font-bold text-[#161616]">: Transfer</span></div>
+            </div>
+
+            <div className="space-y-5 text-[13px]">
+               <div className="flex justify-between"><span className="text-zinc-400 font-bold tracking-wide">Total Harga</span><span className="font-black text-[#161616] tracking-tight">{formatIDR(data.total_bayar)}</span></div>
+               <div className="flex justify-between"><span className="text-zinc-400 font-bold tracking-wide">DP Dibayar</span><span className="font-black text-[#161616] tracking-tight">{formatIDR(data.dp_dibayar)}</span></div>
+            </div>
+
+            <div className="mt-10 flex justify-between items-center pt-8 border-t-2 border-dashed border-zinc-50">
+               <span className="text-[16px] font-black uppercase tracking-tighter text-[#161616]">Total Sisa Tagihan</span>
+               <span className="text-[22px] font-black text-[#EB3232] tracking-tight">
+                 {formatIDR(data.total_bayar - data.dp_dibayar)}
+               </span>
             </div>
           </div>
-        </div>
 
+        </div>
       </div>
     </div>
   );

@@ -2,103 +2,105 @@
 
 import React, { useEffect, useState } from "react";
 import { 
-  Area, AreaChart, Bar, BarChart, ResponsiveContainer, XAxis, 
+  Area, AreaChart, Bar, BarChart, ResponsiveContainer, XAxis, YAxis,
   Tooltip, CartesianGrid, Cell 
 } from "recharts";
-import { ChevronDown, Loader2 } from "lucide-react";
+import { Loader2, ChevronDown } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
-// --- HEADER CHART DENGAN DROPDOWN DINAMIS ---
+// --- HEADER CHART ---
 const ChartHeader = ({ 
   title, subtitle, options, value, onChange 
 }: { title: string, subtitle: string, options: any[], value: string, onChange: any }) => (
-  <div className="flex justify-between items-start mb-6">
-    <div className="space-y-0.5">
-      <h3 className="font-bold text-lg text-zinc-900">{title}</h3>
-      <p className="text-sm text-zinc-500">{subtitle}</p>
+  <div className="flex justify-between items-start mb-2">
+    <div className="space-y-0.5 text-left">
+      <h3 className="font-extrabold text-[16px] text-[#161616] tracking-tight">{title}</h3>
+      <p className="text-[12px] text-zinc-400 font-medium">{subtitle}</p>
     </div>
     <div className="relative">
       <select 
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="appearance-none flex items-center gap-2 text-xs font-medium border border-zinc-200 rounded-lg px-3 py-1.5 pr-8 text-zinc-600 bg-white hover:bg-zinc-50 transition-colors outline-none cursor-pointer"
+        className="appearance-none text-[11px] font-bold border border-zinc-100 rounded-lg px-3 py-1.5 pr-8 text-zinc-500 bg-zinc-50/50 hover:bg-zinc-100 transition-colors outline-none cursor-pointer"
       >
         {options.map((opt) => (
           <option key={opt.val} value={opt.val}>{opt.label}</option>
         ))}
       </select>
-      <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
+      <ChevronDown size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
     </div>
   </div>
 );
 
-// --- 1. AREA CHART (DINAMIS DENGAN FILTER WAKTU) ---
+// --- 1. AREA CHART (AKTIVITAS TRANSAKSI) ---
 export function TransactionAreaChart() {
   const [data, setData] = useState<any[]>([]);
-  const [range, setRange] = useState("7"); // Default 7 hari terakhir
+  const [range, setRange] = useState("7");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchTransactionData = async () => {
       setLoading(true);
-      const dateLimit = new Date();
-      dateLimit.setDate(dateLimit.getDate() - parseInt(range));
+      try {
+        const dateLimit = new Date();
+        dateLimit.setDate(dateLimit.getDate() - parseInt(range));
 
-      const { data: trans, error } = await supabase
-        .from('transaksi')
-        .select('tanggal, total_bayar')
-        .gte('tanggal', dateLimit.toISOString())
-        .order('tanggal', { ascending: true });
+        const { data: trans } = await supabase
+          .from('transaksi')
+          .select('tanggal, total_bayar')
+          .gte('tanggal', dateLimit.toISOString())
+          .order('tanggal', { ascending: true });
 
-      if (!error && trans) {
-        // Grouping data berdasarkan tanggal
-        const grouped = trans.reduce((acc: any, curr: any) => {
-          const dateLabel = new Date(curr.tanggal).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' });
-          acc[dateLabel] = (acc[dateLabel] || 0) + Number(curr.total_bayar);
-          return acc;
-        }, {});
+        if (trans) {
+          const grouped = trans.reduce((acc: any, curr: any) => {
+            const dateLabel = new Date(curr.tanggal).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' });
+            acc[dateLabel] = (acc[dateLabel] || 0) + Number(curr.total_bayar);
+            return acc;
+          }, {});
 
-        const formattedData = Object.keys(grouped).map(key => ({
-          name: key,
-          value: grouped[key]
-        }));
-        setData(formattedData);
+          setData(Object.keys(grouped).map(key => ({ name: key, value: grouped[key] })));
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
-
     fetchTransactionData();
   }, [range]);
 
   return (
-    <div className="w-full">
+    <div className="w-full h-full flex flex-col">
       <ChartHeader 
         title="Aktivitas Transaksi" 
-        subtitle="Tren transaksi dan pendapatan toko" 
+        subtitle="Tren pendapatan harian" 
         value={range}
         onChange={setRange}
-        options={[
-          { label: "7 Hari Terakhir", val: "7" },
-          { label: "30 Hari Terakhir", val: "30" },
-          { label: "Bulan Ini", val: "31" }
-        ]}
+        options={[{ label: "7 Hari", val: "7" }, { label: "30 Hari", val: "30" }]}
       />
       
-      <div className="h-[220px] w-full mt-16 relative">
+      <div className="flex-1 w-full relative mt-4">
         {loading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white/50 z-10">
-            <Loader2 className="animate-spin text-zinc-300" />
+          <div className="absolute inset-0 flex items-center justify-center z-10">
+            <Loader2 className="animate-spin text-zinc-200" />
           </div>
         )}
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f4f4f5" />
-            <XAxis dataKey="name" axisLine={false} tickLine={false} fontSize={12} tick={{fill: '#a1a1aa'}} dy={10} />
+          <AreaChart data={data} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+            <defs>
+              <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.15}/>
+                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f8fafc" />
+            <XAxis dataKey="name" axisLine={false} tickLine={false} fontSize={10} tick={{fill: '#94a3b8'}} dy={10} />
+            <YAxis hide />
             <Tooltip 
-              contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
-              formatter={(val: any) => [`Rp ${Number(val || 0).toLocaleString('id-ID')}`, 'Pendapatan']}
+              contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)', fontSize: '12px', fontWeight: 'bold' }}
+              formatter={(val: any) => [`Rp ${Number(val).toLocaleString('id-ID')}`, 'Total']}
             />
-            <Area type="monotone" dataKey="value" stroke="#3b82f6" fill="#bfdbfe" fillOpacity={0.4} strokeWidth={2} />
+            <Area type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorValue)" />
           </AreaChart>
         </ResponsiveContainer>
       </div>
@@ -106,7 +108,7 @@ export function TransactionAreaChart() {
   );
 }
 
-// --- 2. BAR CHART (DINAMIS DENGAN FILTER STATUS STOK) ---
+// --- 2. BAR CHART (STOK BAHAN) ---
 export function StockBarChart() {
   const [data, setData] = useState<any[]>([]);
   const [filter, setFilter] = useState("all");
@@ -115,68 +117,67 @@ export function StockBarChart() {
   useEffect(() => {
     const fetchStockData = async () => {
       setLoading(true);
-      let query = supabase.from('stok_bahan').select('nama_bahan, stok_sisa').order('stok_sisa', { ascending: true });
+      try {
+        let query = supabase
+          .from('stok_bahan')
+          .select('nama_bahan, stok_bahan')
+          .order('stok_bahan', { ascending: true });
 
-      if (filter === "critical") {
-        query = query.lt('stok_sisa', 5);
+        if (filter === "critical") query = query.lt('stok_bahan', 5);
+        
+        const { data: stocks } = await query.limit(6);
+
+        if (stocks) {
+          setData(stocks.map(s => ({ name: s.nama_bahan, value: s.stok_bahan })));
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
       }
-
-      const { data: stocks, error } = await query.limit(6);
-
-      if (!error && stocks) {
-        const formatted = stocks.map(s => ({
-          name: s.nama_bahan,
-          value: s.stok_sisa
-        }));
-        setData(formatted);
-      }
-      setLoading(false);
     };
-
     fetchStockData();
   }, [filter]);
 
   return (
-    <div className="w-full h-full">
+    <div className="w-full h-full flex flex-col">
       <ChartHeader 
-        title="Daftar Stok Bahan" 
-        subtitle="Daftar bahan yang perlu ditambah" 
+        title="Stok Bahan Terendah" 
+        subtitle="Item yang harus segera dibeli" 
         value={filter}
         onChange={setFilter}
-        options={[
-          { label: "Semua Kategori", val: "all" },
-          { label: "Stok Kritis (<5)", val: "critical" }
-        ]}
+        options={[{ label: "Semua Bahan", val: "all" }, { label: "Kritis", val: "critical" }]}
       />
       
-      <div className="flex justify-end gap-4 mb-6">
-        <div className="flex items-center gap-1.5 text-xs text-zinc-600">
-          <span className="w-2.5 h-2.5 rounded-full bg-orange-400"></span> Menipis
+      <div className="flex justify-start gap-4 mt-1 mb-4">
+        <div className="flex items-center gap-1.5 text-[9px] font-black text-zinc-400 uppercase tracking-widest">
+          <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span> Habis
         </div>
-        <div className="flex items-center gap-1.5 text-xs text-zinc-600">
-          <span className="w-2.5 h-2.5 rounded-full bg-red-500"></span> Habis
+        <div className="flex items-center gap-1.5 text-[9px] font-black text-zinc-400 uppercase tracking-widest">
+          <span className="w-1.5 h-1.5 rounded-full bg-orange-400"></span> Menipis
         </div>
       </div>
 
-      <div className="h-[220px] w-full relative">
+      <div className="flex-1 w-full relative">
         {loading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white/50 z-10">
-            <Loader2 className="animate-spin text-zinc-300" />
+          <div className="absolute inset-0 flex items-center justify-center z-10">
+            <Loader2 className="animate-spin text-zinc-200" />
           </div>
         )}
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} barGap={12} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f4f4f5" />
-            <XAxis dataKey="name" axisLine={false} tickLine={false} fontSize={10} tick={{fill: '#71717a'}} dy={10} />
+          <BarChart data={data} margin={{ top: 0, right: 10, left: -30, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f8fafc" />
+            <XAxis dataKey="name" axisLine={false} tickLine={false} fontSize={10} tick={{fill: '#94a3b8'}} dy={10} />
+            <YAxis hide />
             <Tooltip 
-              cursor={{fill: '#f8fafc'}} 
-              contentStyle={{ borderRadius: '12px', border: 'none' }}
+              cursor={{fill: '#f1f5f9', opacity: 0.4}}
+              contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)', fontSize: '12px' }}
             />
-            <Bar dataKey="value" radius={[6, 6, 0, 0]} barSize={40}>
+            <Bar dataKey="value" radius={[8, 8, 0, 0]} barSize={32}>
               {data.map((entry, index) => (
                 <Cell 
                   key={`cell-${index}`} 
-                  fill={entry.value === 0 ? '#ef4444' : entry.value < 5 ? '#fb923c' : '#cbd5e1'} 
+                  fill={entry.value === 0 ? '#ef4444' : entry.value < 5 ? '#fb923c' : '#e2e8f0'} 
                 />
               ))}
             </Bar>

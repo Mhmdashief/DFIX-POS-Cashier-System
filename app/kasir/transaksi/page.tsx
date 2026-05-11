@@ -1,104 +1,242 @@
 "use client";
 
-import { Search, Plus, Filter, MoreHorizontal, FileText, Clock, CheckCircle, XCircle } from "lucide-react";
-import { StatCard } from "@/components/StatCard"; // Pastikan Anda memiliki komponen ini
+import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { 
+  Search, Plus, MoreHorizontal, ChevronDown, 
+  Filter, ChevronRight, Loader2
+} from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
-// Helper untuk Badge Status Transaksi
-const getStatusTrans = (status: string) => {
-  if (status === "Selesai") return "bg-green-50 text-green-700 border-green-200";
-  if (status === "Diproses") return "bg-amber-50 text-amber-700 border-amber-200";
-  return "bg-rose-50 text-rose-700 border-rose-200"; // Dibatalkan
-};
+// Import Komponen
+import { ModalTambahTransaksi } from "@/components/ModalTambahTransaksi";
 
-// Helper untuk Badge Status Pembayaran
-const getStatusBayar = (status: string) => {
-  if (status === "Lunas") return "bg-green-50 text-green-700 border-green-200";
-  if (status === "DP Bayar") return "bg-sky-50 text-sky-700 border-sky-200";
-  return "bg-rose-50 text-rose-700 border-rose-200"; // Belum Bayar
-};
+export default function RiwayatTransaksiPage() {
+  const router = useRouter();
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("Semua");
+  
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [activeMenu, setActiveMenu] = useState<string | null>(null);
+  const [showStatusOptions, setShowStatusOptions] = useState(false);
 
-const transaksiData = [
-  { kode: "DFX-24031", nama: "Budi Santoso", jasa: "Reparasi • Sepatu", extra: "+2", statusT: "Diproses", statusP: "DP Bayar", waktu: "11:40" },
-  { kode: "DFX-24032", nama: "Budi Santoso", jasa: "Custom • Tas", extra: "+2", statusT: "Selesai", statusP: "Lunas", waktu: "25 Maret 2026" },
-  { kode: "DFX-24033", nama: "Budi Santoso", jasa: "Reparasi • Sepatu", extra: "+2", statusT: "Diproses", statusP: "Belum Bayar", waktu: "24 Maret 2026" },
-];
+  const fetchTransactions = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('transaksi')
+        .select('*')
+        .order('id', { ascending: false });
+      if (error) throw error;
+      setTransactions(data || []);
+    } catch (error: any) {
+      console.error("Gagal ambil data:", error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-export default function TransaksiReparasiKasir() {
+  useEffect(() => { fetchTransactions(); }, []);
+
+  const updateStatus = async (id: string, newStatus: string) => {
+    try {
+      const { error } = await supabase.from('transaksi').update({ status: newStatus }).eq('id', id);
+      if (error) throw error;
+      fetchTransactions();
+      setActiveMenu(null);
+    } catch (error: any) {
+      alert("Gagal update status");
+    }
+  };
+
+  const deleteTransaction = async (id: string) => {
+    if (confirm("Apakah Anda yakin ingin menghapus transaksi ini?")) {
+      try {
+        const { error } = await supabase.from('transaksi').delete().eq('id', id);
+        if (error) throw error;
+        fetchTransactions();
+        setActiveMenu(null);
+      } catch (error: any) {
+        alert("Gagal menghapus data");
+      }
+    }
+  };
+
+  const filteredData = transactions.filter(t => {
+    const matchesSearch = (t.nama_pelanggan || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          (t.id || "").toString().includes(searchQuery) ||
+                          (t.invoice_code || "").toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = statusFilter === "Semua" ? true : (t.status || "Diproses") === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
   return (
-    <div className="space-y-6">
-      {/* 1. Stats Section (Ringkasan Kasir) */}
-      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard title="Total Transaksi" value="24" sub="+5 dibanding kemarin" icon={FileText} colorClass="text-zinc-600 bg-zinc-100" />
-        <StatCard title="Transaksi Diproses" value="3" sub="+3 dibanding kemarin" icon={Clock} colorClass="text-amber-600 bg-amber-50" />
-        <StatCard title="Transaksi Selesai" value="5" sub="+2 dibanding kemarin" icon={CheckCircle} colorClass="text-green-600 bg-green-50" />
-        <StatCard title="Transaksi Dibatalkan" value="2" sub="+1 dibanding kemarin" icon={XCircle} colorClass="text-rose-600 bg-rose-50" />
-      </section>
-
-      {/* 2. Controls & Table Section */}
-      <section className="bg-white p-6 rounded-2xl border border-zinc-200">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-          <div>
-            <h2 className="text-lg font-bold text-zinc-900">Transaksi Reparasi Customer</h2>
-            <p className="text-sm text-zinc-500">Daftar seluruh transaksi reparasi yang sedang berjalan dan dapat dikelola oleh kasir</p>
+    <div className="w-full animate-in fade-in duration-500 font-sans">
+      
+      {/* MAIN TABLE BOX */}
+      <div className="bg-white rounded-[24px] border border-zinc-100 overflow-hidden shadow-sm">
+        
+        {/* TABLE HEADER & CONTROLS */}
+        <div className="p-8 border-b border-zinc-50 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+          <div className="min-w-fit">
+            <h1 className="text-[20px] font-black tracking-tight text-zinc-900">RIWAYAT TRANSAKSI</h1>
+            <p className="text-[12px] text-zinc-400 font-bold uppercase tracking-[0.1em] mt-1">Kelola data pengerjaan customer</p>
           </div>
           
-          <div className="flex flex-wrap gap-2 w-full md:w-auto">
-            <div className="relative flex-1 md:w-64">
-                <Search className="absolute left-3 top-2.5 text-zinc-400" size={18} />
-                <input type="text" placeholder="Search" className="w-full pl-10 pr-4 py-2 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-200" />
-            </div>
-            <button className="flex items-center gap-2 px-4 py-2 border border-zinc-200 rounded-lg text-sm font-medium hover:bg-zinc-50 transition-colors">
-                <Filter size={18} /> Filter
-            </button>
-            <button className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white rounded-lg text-sm font-medium hover:bg-zinc-800 transition-colors">
-                <Plus size={18} /> Tambah Pelanggan
-            </button>
+          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+              {/* SEARCH */}
+              <div className="relative flex-1 md:w-72 min-w-[200px]">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-300" size={16} />
+                  <input 
+                      type="text"
+                      placeholder="Cari pelanggan / invoice..."
+                      className="w-full pl-11 pr-4 py-3 bg-zinc-50 border border-zinc-100 rounded-2xl text-[13px] font-bold focus:outline-none focus:ring-2 focus:ring-[#2D4F53]/5 transition-all"
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+              </div>
+
+              {/* ACTION BUTTON */}
+              <button 
+                onClick={() => setIsModalOpen(true)} 
+                className="px-6 py-3 bg-[#2D4F53] text-white rounded-2xl text-[13px] font-bold hover:bg-[#1e3639] transition-all flex items-center gap-2 shadow-lg shadow-[#2D4F53]/10"
+              >
+                <Plus size={18} />
+                Transaksi Baru
+              </button>
+
+              {/* FILTER */}
+              <div className="relative min-w-[160px]">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none">
+                      <Filter size={14} />
+                  </div>
+                  <select 
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value)}
+                      className="w-full pl-10 pr-10 py-3 bg-zinc-50 border border-zinc-100 rounded-2xl text-[13px] font-bold text-zinc-600 appearance-none focus:outline-none cursor-pointer hover:bg-zinc-100 transition-all"
+                  >
+                      <option value="Semua">Semua Status</option>
+                      <option value="Diproses">Diproses</option>
+                      <option value="Selesai">Selesai</option>
+                      <option value="Dibatalkan">Dibatalkan</option>
+                  </select>
+                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" size={14} />
+              </div>
           </div>
         </div>
 
-        {/* Tabel Data */}
+        {/* TABLE CONTENT */}
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="text-zinc-400 border-b border-zinc-100">
-              <tr>
-                <th className="pb-4 font-medium">Kode Order</th>
-                <th className="pb-4 font-medium">Nama Pelanggan</th>
-                <th className="pb-4 font-medium">Kategori & Jasa</th>
-                <th className="pb-4 font-medium">Status Transaksi</th>
-                <th className="pb-4 font-medium">Status Pembayaran</th>
-                <th className="pb-4 font-medium">Waktu Masuk</th>
-                <th className="pb-4 font-medium text-right">Aksi</th>
+          <table className="w-full text-left">
+            <thead>
+              <tr className="text-zinc-400 text-[10px] font-black uppercase tracking-[0.2em] border-b border-zinc-50 bg-zinc-50/20">
+                <th className="py-6 px-8">No. Invoice</th>
+                <th className="py-6 px-8">Pelanggan</th>
+                <th className="py-6 px-8">Layanan</th>
+                <th className="py-6 px-8 text-center">Status Pengerjaan</th>
+                <th className="py-6 px-8 text-center">Pembayaran</th>
+                <th className="py-6 px-8">Tanggal</th>
+                <th className="py-6 px-8 text-right">Aksi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-100">
-              {transaksiData.map((row, i) => (
-                <tr key={i} className="hover:bg-zinc-50 transition-colors">
-                  <td className="py-4 font-medium text-zinc-900">{row.kode}</td>
-                  <td className="py-4 text-zinc-600">{row.nama}</td>
-                  <td className="py-4 text-zinc-600 flex items-center gap-2">
-                    {row.jasa}
-                    <span className="bg-zinc-100 text-zinc-600 px-1.5 py-0.5 rounded text-[10px] font-medium">{row.extra}</span>
+            <tbody className="divide-y divide-zinc-50">
+              {loading ? (
+                 <tr>
+                    <td colSpan={7} className="py-32 text-center">
+                        <div className="flex flex-col items-center gap-3">
+                            <Loader2 className="animate-spin text-[#2D4F53]" size={32} />
+                            <p className="text-zinc-400 font-black text-[11px] tracking-widest uppercase">Memuat Database...</p>
+                        </div>
+                    </td>
+                 </tr>
+              ) : filteredData.length > 0 ? (
+                filteredData.map((item) => (
+                <tr key={item.id} className="hover:bg-zinc-50/50 transition-colors group">
+                  <td className="py-7 px-8 font-bold text-[#2D4F53] text-[13px] font-mono tracking-tight">
+                    {item.invoice_code || `TRX-${item.id}`}
                   </td>
-                  <td className="py-4">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getStatusTrans(row.statusT)}`}>
-                        {row.statusT}
+                  <td className="py-7 px-8 font-bold text-[14px] text-zinc-800">{item.nama_pelanggan || "Umum"}</td>
+                  <td className="py-7 px-8">
+                      <div className="flex flex-col">
+                          <span className="text-[13px] font-bold text-zinc-700">{item.kategori || "Hardware"}</span>
+                          <span className="text-[10px] text-zinc-400 font-black uppercase italic tracking-tight">{item.jenis_jasa || "Service"}</span>
+                      </div>
+                  </td>
+                  <td className="py-7 px-8 text-center">
+                    <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase italic border
+                      ${item.status === 'Selesai' ? 'bg-green-50 text-green-600 border-green-100' : 
+                        item.status === 'Dibatalkan' ? 'bg-red-50 text-red-500 border-red-100' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>
+                      {item.status || "Diproses"}
                     </span>
                   </td>
-                  <td className="py-4">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getStatusBayar(row.statusP)}`}>
-                        {row.statusP}
-                    </span>
+                  <td className="py-7 px-8 text-center">
+                      <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase 
+                          ${item.dp_dibayar >= item.total_bayar ? 'bg-emerald-50 text-emerald-600' : 'bg-orange-50 text-orange-600'}`}>
+                          {item.dp_dibayar >= item.total_bayar ? 'LUNAS' : 'BELUM LUNAS'}
+                      </span>
                   </td>
-                  <td className="py-4 text-zinc-500">{row.waktu}</td>
-                  <td className="py-4 text-right text-zinc-400 cursor-pointer hover:text-zinc-900">
-                    <MoreHorizontal size={18} />
+                  <td className="py-7 px-8 text-zinc-500 font-bold text-[12px]">{item.tanggal || "-"}</td>
+                  <td className="py-7 px-8 text-right relative">
+                     <div className="flex items-center justify-end gap-2">
+                        <button 
+                          onClick={() => router.push(`/admin/transaksi/${item.id}`)}
+                          className="flex items-center gap-1 text-[11px] font-black text-[#2D4F53] opacity-0 group-hover:opacity-100 transition-all mr-2"
+                        >
+                          DETAIL <ChevronRight size={14} />
+                        </button>
+                        <button onClick={() => { setActiveMenu(activeMenu === item.id ? null : item.id); setShowStatusOptions(false); }} className="p-2 hover:bg-zinc-100 rounded-xl transition-all">
+                          <MoreHorizontal size={20} className="text-zinc-400" />
+                        </button>
+                     </div>
+
+                     {activeMenu === item.id && (
+                       <div className="absolute right-6 top-14 w-52 bg-white border border-zinc-100 rounded-2xl z-[100] py-2 shadow-2xl animate-in fade-in zoom-in duration-200">
+                          <button 
+                            onClick={() => router.push(`/admin/transaksi/${item.id}`)}
+                            className="w-full px-5 py-3 text-left text-[13px] font-bold text-zinc-700 hover:bg-zinc-50 transition-colors"
+                          >
+                            Buka Detail
+                          </button>
+                          
+                          <div className="border-y border-zinc-50">
+                              <button 
+                                onClick={() => setShowStatusOptions(!showStatusOptions)}
+                                className="w-full px-5 py-3 text-left text-[13px] font-bold text-zinc-700 hover:bg-zinc-50 flex justify-between items-center"
+                              >
+                                Ubah Status <ChevronDown size={14} className={showStatusOptions ? 'rotate-180' : ''} />
+                              </button>
+                              {showStatusOptions && (
+                                  <div className="bg-zinc-50 py-1 border-t border-zinc-50">
+                                  {['Diproses', 'Selesai', 'Dibatalkan'].map(s => (
+                                      <button key={s} onClick={() => updateStatus(item.id, s)} className="w-full px-8 py-2 text-left text-[11px] font-black text-zinc-400 hover:text-[#2D4F53] uppercase">{s}</button>
+                                  ))}
+                                  </div>
+                              )}
+                          </div>
+                          <button 
+                            onClick={() => deleteTransaction(item.id)}
+                            className="w-full px-5 py-3 text-left text-[13px] font-bold text-red-500 hover:bg-red-50 transition-colors"
+                          >
+                            Hapus Transaksi
+                          </button>
+                       </div>
+                     )}
                   </td>
                 </tr>
-              ))}
+              ))
+              ) : (
+                <tr>
+                    <td colSpan={7} className="py-32 text-center">
+                        <p className="text-zinc-400 font-bold text-sm tracking-tight">Tidak ada transaksi yang ditemukan.</p>
+                    </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
-      </section>
+      </div>
+      <ModalTambahTransaksi isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSuccess={fetchTransactions} />
     </div>
   );
 }
