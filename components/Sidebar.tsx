@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import { 
-  LayoutDashboard, Receipt, BarChart3, Users, FileText, 
-  LogOut, ChevronDown, ChevronUp, LucideIcon 
+import {
+  LayoutDashboard, Receipt, BarChart3, Users, FileText,
+  LogOut, ChevronDown, ChevronUp, LucideIcon
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -37,7 +37,7 @@ export default function Sidebar({ role }: { role: 'admin' | 'kasir' }) {
 
   useEffect(() => {
     const savedUser = localStorage.getItem("user");
-    
+
     if (savedUser) {
       setUser(JSON.parse(savedUser));
     } else {
@@ -67,8 +67,8 @@ export default function Sidebar({ role }: { role: 'admin' | 'kasir' }) {
   const adminMenu: MenuItem[] = [
     { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
     { name: "Transaksi Reparasi", href: "/admin/transaksi", icon: Receipt },
-    { 
-      name: "Data Operasional", icon: BarChart3, 
+    {
+      name: "Data Operasional", icon: BarChart3,
       sub: [
         { name: "Manajemen Pengguna", href: "/admin/manajemen-pengguna" },
         { name: "Data Pelanggan", href: "/admin/data-pelanggan" },
@@ -76,11 +76,10 @@ export default function Sidebar({ role }: { role: 'admin' | 'kasir' }) {
         { name: "Data Bahan", href: "/admin/data-bahan" },
       ]
     },
-    { 
+    {
       name: "Laporan", icon: FileText,
       sub: [
         { name: "Transaksi", href: "/admin/laporan-transaksi" },
-        { name: "Bahan", href: "/admin/laporan-bahan" },
       ]
     },
   ];
@@ -98,13 +97,13 @@ export default function Sidebar({ role }: { role: 'admin' | 'kasir' }) {
     <aside className="w-64 min-h-screen bg-white border-r border-zinc-200 p-6 flex flex-col sticky top-0">
       {/* Logo Section */}
       <div className="mb-10 px-2">
-        <Image 
-          src="/dfix.png" 
-          alt="D'fix Logo" 
-          width={120} 
-          height={40} 
+        <Image
+          src="/dfix.png"
+          alt="D'fix Logo"
+          width={120}
+          height={40}
           style={{ width: "120px", height: "auto" }} // Memperbaiki warning aspect ratio
-          priority 
+          priority
         />
       </div>
 
@@ -114,7 +113,7 @@ export default function Sidebar({ role }: { role: 'admin' | 'kasir' }) {
         {menu.map((item) => (
           <div key={item.name}>
             {item.sub ? (
-              <button 
+              <button
                 onClick={() => toggleDropdown(item.name)}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${openDropdown === item.name ? "text-black bg-zinc-50" : "text-zinc-600 hover:bg-zinc-100"}`}
               >
@@ -123,8 +122,8 @@ export default function Sidebar({ role }: { role: 'admin' | 'kasir' }) {
                 {openDropdown === item.name ? <ChevronUp size={16} className="ml-auto" /> : <ChevronDown size={16} className="ml-auto" />}
               </button>
             ) : (
-              <Link 
-                href={item.href || "#"} 
+              <Link
+                href={item.href || "#"}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${pathname === item.href ? "bg-zinc-800 text-white shadow-md shadow-zinc-200" : "text-zinc-600 hover:bg-zinc-100"}`}
               >
                 <item.icon size={18} /> {item.name}
@@ -134,9 +133,9 @@ export default function Sidebar({ role }: { role: 'admin' | 'kasir' }) {
             {item.sub && openDropdown === item.name && (
               <div className="pl-10 space-y-1 mt-1 animate-in fade-in slide-in-from-top-2 duration-200">
                 {item.sub.map((sub) => (
-                  <Link 
-                    key={sub.name} 
-                    href={sub.href} 
+                  <Link
+                    key={sub.name}
+                    href={sub.href}
                     className={`block py-2 text-sm transition-colors ${pathname === sub.href ? "text-black font-bold" : "text-zinc-500"} hover:text-black`}
                   >
                     {sub.name}
@@ -150,25 +149,25 @@ export default function Sidebar({ role }: { role: 'admin' | 'kasir' }) {
 
       {/* Bottom Section: Profile & Logout */}
       <div className="mt-auto border-t border-zinc-100 pt-6">
-        <button 
-          onClick={handleLogout} 
+        <button
+          onClick={handleLogout}
           className="flex items-center gap-3 text-zinc-500 hover:text-red-600 transition-all mb-6 group w-full text-left px-3 py-2 rounded-lg hover:bg-red-50"
         >
-          <LogOut size={18} className="group-hover:translate-x-1 transition-transform" /> 
+          <LogOut size={18} className="group-hover:translate-x-1 transition-transform" />
           <span className="text-sm font-medium">Logout</span>
         </button>
 
         {/* PROFILE LINK (Akses ke Info Profil) */}
-        <Link 
-          href="/profil" 
+        <Link
+          href="/profil"
           className={`flex items-center gap-3 p-2 rounded-2xl transition-all border hover:shadow-sm ${pathname === '/profil' ? 'bg-[#2D4F53]/5 border-[#2D4F53]/10' : 'bg-zinc-50 border-transparent hover:bg-zinc-100'}`}
         >
           <div className="w-10 h-10 rounded-full bg-zinc-200 overflow-hidden flex-shrink-0 border-2 border-white">
-              <img 
-                src={`https://ui-avatars.com/api/?name=${user?.name || "User"}&background=random`} 
-                alt="Avatar" 
-                className="w-full h-full object-cover"
-              />
+            <img
+              src={`https://ui-avatars.com/api/?name=${user?.name || "User"}&background=random`}
+              alt="Avatar"
+              className="w-full h-full object-cover"
+            />
           </div>
           <div className="overflow-hidden flex-1">
             <p className="text-sm font-bold text-zinc-800 truncate">{user?.name || "Loading..."}</p>

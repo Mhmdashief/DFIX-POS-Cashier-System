@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Search, Plus, MoreHorizontal, Wrench, Ban, CheckCircle2 } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { getServices, saveServiceAction, deleteServiceAction } from "@/app/actions/service";
 import ModalJasa from "@/components/ModalJasa";
 
 // --- KOMPONEN KOTAK STATISTIK ---
@@ -21,9 +21,8 @@ function StatCard({ title, value, sub, trendValue, trendColor, desc, icon }: any
           <span className="text-3xl font-bold text-zinc-900">{value}</span>
           <span className="text-xs text-zinc-400 font-medium">/{sub}</span>
         </div>
-        <div className={`flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-bold ${
-          isPositive ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
-        }`}>
+        <div className={`flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-bold ${isPositive ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
+          }`}>
           <span>↗</span> {trendValue}
         </div>
       </div>
@@ -43,12 +42,7 @@ export default function DataJasaPage() {
   const fetchJasa = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('layanan_reparasi')
-        .select('*')
-        .order('updated_at', { ascending: false });
-      
-      if (error) throw error;
+      const data = await getServices();
       setJasa(data || []);
     } catch (err) {
       console.error("Gagal mengambil data:", err);
@@ -57,37 +51,34 @@ export default function DataJasaPage() {
     }
   };
 
-  useEffect(() => { 
-    fetchJasa(); 
+  useEffect(() => {
+    fetchJasa();
   }, []);
 
   const handleSave = async (formData: any) => {
-    const dataToSave = { 
-      nama_jasa: formData.nama_jasa,
-      kategori: Array.isArray(formData.kategori) ? formData.kategori.join(', ') : formData.kategori,
+    const dataToSave = {
+      name: formData.nama_jasa,
+      category: Array.isArray(formData.kategori) ? formData.kategori.join(', ') : formData.kategori,
       status: formData.status,
-      updated_at: new Date().toISOString()
     };
 
-    if (editData) {
-      await supabase.from('layanan_reparasi').update(dataToSave).eq('id', editData.id);
-    } else {
-      await supabase.from('layanan_reparasi').insert([dataToSave]);
+    const result = await saveServiceAction(dataToSave, editData?.id);
+    if (result.success) {
+      setIsModalOpen(false);
+      fetchJasa();
     }
-    setIsModalOpen(false);
-    fetchJasa();
   };
 
-  const filtered = jasa.filter(j => (j.nama_jasa || "").toLowerCase().includes(searchQuery.toLowerCase()));
+  const filtered = jasa.filter(j => (j.name || "").toLowerCase().includes(searchQuery.toLowerCase()));
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return "-";
     try {
       const date = new Date(dateStr);
-      return date.toLocaleDateString('id-ID', { 
-        day: 'numeric', 
-        month: 'long', 
-        year: 'numeric' 
+      return date.toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
       });
     } catch (e) {
       return "-";
@@ -96,11 +87,10 @@ export default function DataJasaPage() {
 
   return (
     <div className="min-h-screen bg-[#FDFDFD] p-8 w-full font-sans text-zinc-900">
-      
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
         <StatCard title="Total Jenis Jasa" value={jasa.length} sub="Jasa" trendValue="Normal" trendColor="green" desc="Total jenis layanan reparasi" icon={<Wrench size={20} />} />
         <StatCard title="Jasa Aktif" value={jasa.filter(j => j.status === 'Aktif').length} sub="Jasa" trendValue="Normal" trendColor="green" desc="Layanan yang aktif" icon={<CheckCircle2 size={20} className="text-yellow-500" />} />
-        <StatCard title="Jasa Nonaktif" value={jasa.filter(j => j.status !== 'Aktif').length} sub="Jasa" trendValue="Normal" trendColor="red" desc="Layanan yang nonaktif" icon={<Ban size={20} />} />
       </div>
 
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-6">
@@ -109,7 +99,7 @@ export default function DataJasaPage() {
           <p className="text-[13px] text-zinc-400 font-medium">Daftar seluruh jenis jasa reparasi.</p>
         </div>
         <div className="flex gap-3 w-full md:w-auto">
-          <button 
+          <button
             onClick={() => { setEditData(null); setIsModalOpen(true); }}
             className="flex items-center gap-2 px-6 py-2.5 bg-white border border-zinc-200 rounded-xl text-sm font-bold text-zinc-600 hover:bg-zinc-50 transition-all active:scale-95"
           >
@@ -117,9 +107,9 @@ export default function DataJasaPage() {
           </button>
           <div className="relative flex-1 md:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-300" size={18} />
-            <input 
-              placeholder="Cari Jasa..." 
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-zinc-200 outline-none text-sm focus:border-[#2D4F53] font-medium" 
+            <input
+              placeholder="Cari Jasa..."
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-zinc-200 outline-none text-sm focus:border-[#2D4F53] font-medium"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -151,7 +141,7 @@ export default function DataJasaPage() {
                 return (
                   <tr key={item.id} className="hover:bg-zinc-50/50 transition-colors">
                     <td className="py-5 px-6 text-sm font-medium text-zinc-400">{(index + 1).toString().padStart(2, '0')}</td>
-                    <td className="py-5 px-6 text-sm font-bold text-zinc-700">{item.nama_jasa}</td>
+                    <td className="py-5 px-6 text-sm font-bold text-zinc-700">{item.name}</td>
                     <td className="py-5 px-6">
                       <div className="flex items-center gap-1.5">
                         <span className="text-sm font-medium text-zinc-500">{cats.slice(0, 2).join(', ')}</span>
@@ -163,24 +153,24 @@ export default function DataJasaPage() {
                         {item.status}
                       </span>
                     </td>
-                    <td className="py-5 px-6 text-sm font-medium text-zinc-500">{formatDate(item.created_at)}</td>
-                    <td className="py-5 px-6 text-sm font-medium text-zinc-500">{formatDate(item.updated_at)}</td>
-                    
+                    <td className="py-5 px-6 text-sm font-medium text-zinc-500">{formatDate(item.createdAt)}</td>
+                    <td className="py-5 px-6 text-sm font-medium text-zinc-500">{formatDate(item.updatedAt)}</td>
+
                     <td className="py-5 px-6 text-right relative">
-                      <button 
-                        onClick={() => setActiveMenu(activeMenu === item.id ? null : item.id)} 
+                      <button
+                        onClick={() => setActiveMenu(activeMenu === item.id ? null : item.id)}
                         className="p-2 hover:bg-zinc-100 rounded-lg transition-colors"
                       >
                         <MoreHorizontal size={18} className="text-zinc-400" />
                       </button>
-                      
+
                       {activeMenu === item.id && (
                         <div className="absolute right-6 top-12 w-44 bg-white border border-zinc-100 rounded-xl z-[99] py-1 shadow-xl animate-in fade-in zoom-in-95 duration-150">
                           <button onClick={() => { setEditData(item); setIsModalOpen(true); setActiveMenu(null); }} className="w-full px-4 py-2.5 text-left text-[13px] font-bold text-zinc-700 hover:bg-zinc-50 border-b border-zinc-50">Edit Jasa</button>
                           <button onClick={async () => {
-                            if(confirm("Hapus data ini?")) {
-                              await supabase.from('layanan_reparasi').delete().eq('id', item.id);
-                              fetchJasa();
+                            if (confirm("Hapus data ini?")) {
+                              const result = await deleteServiceAction(item.id);
+                              if (result.success) fetchJasa();
                             }
                           }} className="w-full px-4 py-2.5 text-left text-[13px] font-bold text-red-500 hover:bg-red-50">Hapus Jasa</button>
                         </div>

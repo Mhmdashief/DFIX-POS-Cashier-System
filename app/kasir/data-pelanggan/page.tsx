@@ -6,7 +6,7 @@ import {
   Trash2, Edit3, MapPin, Phone, 
   User, X, Calendar, Loader2
 } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { getCustomers, saveCustomerAction, deleteCustomerAction } from "@/app/actions/customer";
 
 // --- KOMPONEN MODAL ---
 const ModalPelanggan = ({ isOpen, onClose, onSave, initialData }: any) => {
@@ -15,9 +15,9 @@ const ModalPelanggan = ({ isOpen, onClose, onSave, initialData }: any) => {
   useEffect(() => {
     if (initialData) {
       setFormData({ 
-        nama: initialData.nama || "", 
-        hp: initialData.hp || initialData.telepon || "", 
-        alamat: initialData.alamat || "" 
+        nama: initialData.name || "", 
+        hp: initialData.phone || "", 
+        alamat: initialData.address || "" 
       });
     } else {
       setFormData({ nama: "", hp: "", alamat: "" });
@@ -83,8 +83,7 @@ export default function DataPelangganKasirPage() {
   const fetchCustomers = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase.from('pelanggan').select('*').order('nama', { ascending: true });
-      if (error) throw error;
+      const data = await getCustomers();
       setCustomers(data || []);
     } finally {
       setLoading(false);
@@ -93,14 +92,19 @@ export default function DataPelangganKasirPage() {
 
   const handleSave = async (formData: any) => {
     try {
-      if (editData) {
-        await supabase.from('pelanggan').update(formData).eq('id', editData.id);
+      const result = await saveCustomerAction({
+        name: formData.nama,
+        phone: formData.hp,
+        address: formData.alamat
+      }, editData?.id);
+      
+      if (result.success) {
+        setIsModalOpen(false);
+        setEditData(null);
+        fetchCustomers();
       } else {
-        await supabase.from('pelanggan').insert([formData]);
+        alert("Gagal menyimpan: " + result.error);
       }
-      setIsModalOpen(false);
-      setEditData(null);
-      fetchCustomers();
     } catch (error) {
       console.error(error);
     }
@@ -108,8 +112,8 @@ export default function DataPelangganKasirPage() {
 
   const handleDelete = async (id: string) => {
     if (confirm("Apakah anda yakin ingin menghapus data ini?")) {
-      const { error } = await supabase.from('pelanggan').delete().eq('id', id);
-      if (!error) fetchCustomers();
+      const result = await deleteCustomerAction(id);
+      if (result.success) fetchCustomers();
     }
   };
 
@@ -129,8 +133,8 @@ export default function DataPelangganKasirPage() {
   };
 
   const filtered = customers.filter(c => 
-    (c.nama || "").toLowerCase().includes(searchQuery.toLowerCase()) || 
-    (c.hp || "").includes(searchQuery)
+    (c.name || "").toLowerCase().includes(searchQuery.toLowerCase()) || 
+    (c.phone || "").includes(searchQuery)
   );
 
   return (
@@ -163,8 +167,9 @@ export default function DataPelangganKasirPage() {
       </div>
 
       {/* TABLE BOX */}
-      <div className="bg-white rounded-[24px] border border-zinc-100 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
+      <div className="bg-white rounded-[24px] border border-zinc-100 shadow-sm overflow-visible relative z-20">
+        <div className="overflow-visible">
+
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="text-zinc-400 text-[10px] font-black border-b border-zinc-50 uppercase tracking-[0.2em] bg-zinc-50/30">
@@ -194,19 +199,19 @@ export default function DataPelangganKasirPage() {
                     <td className="py-6 px-8">
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-xl bg-zinc-100 flex items-center justify-center font-black text-zinc-500 text-[11px]">
-                          {(c.nama || "U").substring(0, 2).toUpperCase()}
+                          {(c.name || "U").substring(0, 2).toUpperCase()}
                         </div>
-                        <span className="text-[14px] font-black text-zinc-800">{c.nama}</span>
+                        <span className="text-[14px] font-black text-zinc-800">{c.name}</span>
                       </div>
                     </td>
-                    <td className="py-6 px-8 text-sm font-bold text-zinc-600">{c.hp || c.telepon || "-"}</td>
-                    <td className="py-6 px-8 text-[13px] text-zinc-500 font-medium truncate max-w-[200px]">{c.alamat || "Tidak ada alamat"}</td>
+                    <td className="py-6 px-8 text-sm font-bold text-zinc-600">{c.phone || "-"}</td>
+                    <td className="py-6 px-8 text-[13px] text-zinc-500 font-medium truncate max-w-[200px]">{c.address || "Tidak ada alamat"}</td>
                     <td className="py-6 px-8 text-center">
-                      <span className="px-3 py-1 bg-zinc-100 rounded-lg text-[12px] font-black text-zinc-800">{c.total_order || 0}</span>
+                      <span className="px-3 py-1 bg-zinc-100 rounded-lg text-[12px] font-black text-zinc-800">{c.transactions?.length || 0}</span>
                     </td>
                     <td className="py-6 px-8">
                       <div className="flex items-center gap-2 text-[12px] text-zinc-500 font-bold">
-                        <Calendar size={14} className="text-[#2D4F53]" /> {formatDate(c.terakhir_belanja)}
+                        <Calendar size={14} className="text-[#2D4F53]" /> {c.transactions?.[0] ? formatDate(c.transactions[0].createdAt) : "-"}
                       </div>
                     </td>
                     <td className="py-6 px-8 text-right relative">
@@ -218,15 +223,16 @@ export default function DataPelangganKasirPage() {
                       </button>
                       
                       {activeMenu === c.id && (
-                        <div ref={dropdownRef} className="absolute right-8 top-14 w-40 bg-white border border-zinc-100 rounded-2xl z-[60] shadow-2xl py-2 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-                          <button onClick={() => { setEditData(c); setIsModalOpen(true); setActiveMenu(null); }} className="w-full px-5 py-2.5 text-left text-[12px] font-bold text-zinc-700 hover:bg-zinc-50 flex items-center gap-2 transition-colors">
-                            <Edit3 size={14} /> Edit Data
+                        <div ref={dropdownRef} className="absolute right-8 top-12 w-48 bg-white border border-zinc-100 rounded-2xl z-[100] shadow-2xl py-2 animate-in fade-in zoom-in-95 duration-150">
+                          <button onClick={() => { setEditData(c); setIsModalOpen(true); setActiveMenu(null); }} className="w-full px-5 py-3 text-left text-[13px] font-bold text-zinc-700 hover:bg-zinc-50 flex items-center gap-3 transition-colors">
+                            <Edit3 size={16} className="text-zinc-400" /> Edit Data Pelanggan
                           </button>
-                          <button onClick={() => handleDelete(c.id)} className="w-full px-5 py-2.5 text-left text-[12px] font-bold text-red-500 hover:bg-red-50 flex items-center gap-2 transition-colors border-t border-zinc-50">
-                            <Trash2 size={14} /> Hapus
+                          <button onClick={() => handleDelete(c.id)} className="w-full px-5 py-3 text-left text-[13px] font-bold text-red-500 hover:bg-red-50 flex items-center gap-3 transition-colors border-t border-zinc-50">
+                            <Trash2 size={16} className="text-red-400" /> Hapus Pelanggan
                           </button>
                         </div>
                       )}
+
                     </td>
                   </tr>
                 ))

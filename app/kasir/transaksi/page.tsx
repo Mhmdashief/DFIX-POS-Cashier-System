@@ -6,10 +6,16 @@ import {
   Search, Plus, MoreHorizontal, ChevronDown, 
   Filter, ChevronRight, Loader2
 } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { 
+  getTransactions, 
+  updateTransactionStatusAction, 
+  deleteTransactionAction,
+  updatePaymentStatusAction
+} from "@/app/actions/transaction";
 
 // Import Komponen
-import { ModalTambahTransaksi } from "@/components/ModalTambahTransaksi";
+import ModalTransaksiBaru from "@/components/ModalTransaksiBaru";
+
 
 export default function RiwayatTransaksiPage() {
   const router = useRouter();
@@ -21,15 +27,12 @@ export default function RiwayatTransaksiPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [showStatusOptions, setShowStatusOptions] = useState(false);
+  const [showPaymentOptions, setShowPaymentOptions] = useState(false);
 
   const fetchTransactions = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('transaksi')
-        .select('*')
-        .order('id', { ascending: false });
-      if (error) throw error;
+      const data = await getTransactions();
       setTransactions(data || []);
     } catch (error: any) {
       console.error("Gagal ambil data:", error.message);
@@ -42,8 +45,8 @@ export default function RiwayatTransaksiPage() {
 
   const updateStatus = async (id: string, newStatus: string) => {
     try {
-      const { error } = await supabase.from('transaksi').update({ status: newStatus }).eq('id', id);
-      if (error) throw error;
+      const result = await updateTransactionStatusAction(id, newStatus);
+      if (!result.success) throw new Error(result.error);
       fetchTransactions();
       setActiveMenu(null);
     } catch (error: any) {
@@ -51,11 +54,22 @@ export default function RiwayatTransaksiPage() {
     }
   };
 
+  const updatePaymentStatus = async (id: string, newStatus: string) => {
+    try {
+      const result = await updatePaymentStatusAction(id, newStatus);
+      if (!result.success) throw new Error(result.error);
+      fetchTransactions();
+      setActiveMenu(null);
+    } catch (error: any) {
+      alert("Gagal update status pembayaran");
+    }
+  };
+
   const deleteTransaction = async (id: string) => {
     if (confirm("Apakah Anda yakin ingin menghapus transaksi ini?")) {
       try {
-        const { error } = await supabase.from('transaksi').delete().eq('id', id);
-        if (error) throw error;
+        const result = await deleteTransactionAction(id);
+        if (!result.success) throw new Error(result.error);
         fetchTransactions();
         setActiveMenu(null);
       } catch (error: any) {
@@ -65,10 +79,10 @@ export default function RiwayatTransaksiPage() {
   };
 
   const filteredData = transactions.filter(t => {
-    const matchesSearch = (t.nama_pelanggan || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+    const matchesSearch = (t.customer?.name || t.customerName || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
                           (t.id || "").toString().includes(searchQuery) ||
-                          (t.invoice_code || "").toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === "Semua" ? true : (t.status || "Diproses") === statusFilter;
+                          (t.invoiceCode || "").toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = statusFilter === "Semua" ? true : (t.orderStatus || "Diproses") === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
@@ -76,7 +90,7 @@ export default function RiwayatTransaksiPage() {
     <div className="w-full animate-in fade-in duration-500 font-sans">
       
       {/* MAIN TABLE BOX */}
-      <div className="bg-white rounded-[24px] border border-zinc-100 overflow-hidden shadow-sm">
+      <div className="bg-white rounded-[24px] border border-zinc-100 shadow-sm relative z-0">
         
         {/* TABLE HEADER & CONTROLS */}
         <div className="p-8 border-b border-zinc-50 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
@@ -127,7 +141,7 @@ export default function RiwayatTransaksiPage() {
         </div>
 
         {/* TABLE CONTENT */}
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto min-h-[450px]">
           <table className="w-full text-left">
             <thead>
               <tr className="text-zinc-400 text-[10px] font-black uppercase tracking-[0.2em] border-b border-zinc-50 bg-zinc-50/20">
@@ -154,41 +168,36 @@ export default function RiwayatTransaksiPage() {
                 filteredData.map((item) => (
                 <tr key={item.id} className="hover:bg-zinc-50/50 transition-colors group">
                   <td className="py-7 px-8 font-bold text-[#2D4F53] text-[13px] font-mono tracking-tight">
-                    {item.invoice_code || `TRX-${item.id}`}
+                    {item.invoiceCode || `TRX-${item.id.slice(0, 8)}`}
                   </td>
-                  <td className="py-7 px-8 font-bold text-[14px] text-zinc-800">{item.nama_pelanggan || "Umum"}</td>
+                  <td className="py-7 px-8 font-bold text-[14px] text-zinc-800">{item.customer?.name || item.customerName || "Umum"}</td>
                   <td className="py-7 px-8">
                       <div className="flex flex-col">
-                          <span className="text-[13px] font-bold text-zinc-700">{item.kategori || "Hardware"}</span>
-                          <span className="text-[10px] text-zinc-400 font-black uppercase italic tracking-tight">{item.jenis_jasa || "Service"}</span>
+                          <span className="text-[13px] font-bold text-zinc-700">{item.category || "Hardware"}</span>
+                          <span className="text-[10px] text-zinc-400 font-black uppercase italic tracking-tight">{item.serviceName || "Service"}</span>
                       </div>
                   </td>
                   <td className="py-7 px-8 text-center">
                     <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase italic border
-                      ${item.status === 'Selesai' ? 'bg-green-50 text-green-600 border-green-100' : 
-                        item.status === 'Dibatalkan' ? 'bg-red-50 text-red-500 border-red-100' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>
-                      {item.status || "Diproses"}
+                      ${item.orderStatus === 'Selesai' ? 'bg-green-50 text-green-600 border-green-100' : 
+                        item.orderStatus === 'Dibatalkan' ? 'bg-red-50 text-red-500 border-red-100' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>
+                      {item.orderStatus || "Diproses"}
                     </span>
                   </td>
                   <td className="py-7 px-8 text-center">
                       <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase 
-                          ${item.dp_dibayar >= item.total_bayar ? 'bg-emerald-50 text-emerald-600' : 'bg-orange-50 text-orange-600'}`}>
-                          {item.dp_dibayar >= item.total_bayar ? 'LUNAS' : 'BELUM LUNAS'}
+                          ${item.paymentStatus === 'LUNAS' ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-500'}`}>
+                          {item.paymentStatus === 'LUNAS' ? 'LUNAS' : 'DP BAYAR'}
                       </span>
+
                   </td>
-                  <td className="py-7 px-8 text-zinc-500 font-bold text-[12px]">{item.tanggal || "-"}</td>
+                  <td className="py-7 px-8 text-zinc-500 font-bold text-[12px]">{new Date(item.createdAt).toLocaleDateString('id-ID') || "-"}</td>
                   <td className="py-7 px-8 text-right relative">
-                     <div className="flex items-center justify-end gap-2">
-                        <button 
-                          onClick={() => router.push(`/admin/transaksi/${item.id}`)}
-                          className="flex items-center gap-1 text-[11px] font-black text-[#2D4F53] opacity-0 group-hover:opacity-100 transition-all mr-2"
-                        >
-                          DETAIL <ChevronRight size={14} />
-                        </button>
-                        <button onClick={() => { setActiveMenu(activeMenu === item.id ? null : item.id); setShowStatusOptions(false); }} className="p-2 hover:bg-zinc-100 rounded-xl transition-all">
-                          <MoreHorizontal size={20} className="text-zinc-400" />
-                        </button>
-                     </div>
+                    <div className="flex items-center justify-end">
+                      <button onClick={() => { setActiveMenu(activeMenu === item.id ? null : item.id); setShowStatusOptions(false); setShowPaymentOptions(false); }} className="p-2 hover:bg-zinc-100 rounded-xl transition-all">
+                        <MoreHorizontal size={20} className="text-zinc-400" />
+                      </button>
+                    </div>
 
                      {activeMenu === item.id && (
                        <div className="absolute right-6 top-14 w-52 bg-white border border-zinc-100 rounded-2xl z-[100] py-2 shadow-2xl animate-in fade-in zoom-in duration-200">
@@ -199,18 +208,24 @@ export default function RiwayatTransaksiPage() {
                             Buka Detail
                           </button>
                           
-                          <div className="border-y border-zinc-50">
+
+                          <div className="border-b border-zinc-50">
                               <button 
-                                onClick={() => setShowStatusOptions(!showStatusOptions)}
+                                onClick={() => { setShowPaymentOptions(!showPaymentOptions); setShowStatusOptions(false); }}
                                 className="w-full px-5 py-3 text-left text-[13px] font-bold text-zinc-700 hover:bg-zinc-50 flex justify-between items-center"
                               >
-                                Ubah Status <ChevronDown size={14} className={showStatusOptions ? 'rotate-180' : ''} />
+                                Ubah Pembayaran <ChevronDown size={14} className={showPaymentOptions ? 'rotate-180' : ''} />
                               </button>
-                              {showStatusOptions && (
+                              {showPaymentOptions && (
                                   <div className="bg-zinc-50 py-1 border-t border-zinc-50">
-                                  {['Diproses', 'Selesai', 'Dibatalkan'].map(s => (
-                                      <button key={s} onClick={() => updateStatus(item.id, s)} className="w-full px-8 py-2 text-left text-[11px] font-black text-zinc-400 hover:text-[#2D4F53] uppercase">{s}</button>
+                                  {[
+                                    { id: 'LUNAS', label: 'LUNAS' },
+                                    { id: 'DP_BAYAR', label: 'DP BAYAR' }
+                                  ].map(s => (
+                                      <button key={s.id} onClick={() => updatePaymentStatus(item.id, s.id)} className="w-full px-8 py-2 text-left text-[11px] font-black text-zinc-400 hover:text-[#2D4F53] uppercase">{s.label}</button>
                                   ))}
+
+
                                   </div>
                               )}
                           </div>
@@ -236,7 +251,8 @@ export default function RiwayatTransaksiPage() {
           </table>
         </div>
       </div>
-      <ModalTambahTransaksi isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSuccess={fetchTransactions} />
+      <ModalTransaksiBaru isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onRefresh={fetchTransactions} />
+
     </div>
   );
 }

@@ -2,12 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, Copy } from 'lucide-react';
-import { supabase } from '@/lib/supabase'; // Pastikan path import supabase sudah benar
+import { saveMaterialAction } from '@/app/actions/material';
 
 interface TambahBahanModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: () => void; // Ubah menjadi void karena kita akan fetch ulang di parent
+  onSave: () => void;
   initialData?: any;
 }
 
@@ -24,11 +24,11 @@ const TambahBahanModal: React.FC<TambahBahanModalProps> = ({ isOpen, onClose, on
   useEffect(() => {
     if (initialData) {
       setFormData({
-        nama_bahan: initialData.nama_bahan || "",
-        varian: initialData.varian || "",
-        kategori: initialData.kategori || "",
-        stok_bahan: initialData.stok_bahan || 0,
-        satuan: initialData.satuan || "Pcs",
+        nama_bahan: initialData.name || "",
+        varian: initialData.variant || "",
+        kategori: initialData.category || "",
+        stok_bahan: initialData.stock || 0,
+        satuan: initialData.unit || "Pcs",
       });
     } else {
       setFormData({
@@ -49,40 +49,22 @@ const TambahBahanModal: React.FC<TambahBahanModalProps> = ({ isOpen, onClose, on
 
     setLoading(true);
     try {
-      if (initialData) {
-        // Logika Update (Edit)
-        const { error } = await supabase
-          .from('stok_bahan')
-          .update({
-            nama_bahan: formData.nama_bahan,
-            varian: formData.varian,
-            kategori: formData.kategori,
-            stok_bahan: formData.stok_bahan,
-            satuan: formData.satuan,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', initialData.id);
+      const dataToSave = {
+        name: formData.nama_bahan,
+        variant: formData.varian,
+        category: formData.kategori,
+        stock: formData.stok_bahan,
+        unit: formData.satuan,
+      };
 
-        if (error) throw error;
-      } else {
-        // Logika Insert (Tambah Baru)
-        const { error } = await supabase
-          .from('stok_bahan')
-          .insert([
-            {
-              nama_bahan: formData.nama_bahan,
-              varian: formData.varian,
-              kategori: formData.kategori,
-              stok_bahan: formData.stok_bahan,
-              satuan: formData.satuan,
-            },
-          ]);
+      const result = await saveMaterialAction(dataToSave, initialData?.id);
 
-        if (error) throw error;
+      if (!result.success) {
+        throw new Error(result.error);
       }
 
-      onSave(); // Memicu refresh data di halaman utama
-      onClose(); // Tutup modal
+      onSave();
+      onClose();
     } catch (error: any) {
       alert("Error: " + error.message);
     } finally {
@@ -112,7 +94,6 @@ const TambahBahanModal: React.FC<TambahBahanModalProps> = ({ isOpen, onClose, on
         {/* Form Body */}
         <div className="p-8 space-y-5 max-h-[70vh] overflow-y-auto">
           
-          {/* Input Reusable Component */}
           {[
             { label: "Nama Bahan", key: "nama_bahan", type: "text", placeholder: "Cat Warna Hitam" },
             { label: "Varian", key: "varian", type: "text", placeholder: "Hitam" },
@@ -127,16 +108,29 @@ const TambahBahanModal: React.FC<TambahBahanModalProps> = ({ isOpen, onClose, on
                   <Copy size={18} />
                 </div>
                 <span className="absolute left-10 text-gray-200">|</span>
-                <input 
-                  type={field.type}
-                  placeholder={field.placeholder} 
-                  className={`w-full pl-14 pr-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:border-[#2D4F53] transition-all placeholder:text-gray-300 ${field.key === 'stok_bahan' ? 'font-bold' : ''}`}
-                  value={(formData as any)[field.key]}
-                  onChange={(e) => setFormData({ 
-                    ...formData, 
-                    [field.key]: field.type === 'number' ? Number(e.target.value) : e.target.value 
-                  })}
-                />
+                {field.key === 'stok_bahan' ? (
+                  <input 
+                    type="number"
+                    placeholder="0" 
+                    className="w-full pl-14 pr-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:border-[#2D4F53] transition-all placeholder:text-gray-300 font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    value={formData.stok_bahan === 0 ? "" : formData.stok_bahan}
+                    onChange={(e) => {
+                      const val = e.target.value === "" ? 0 : parseInt(e.target.value);
+                      setFormData({ ...formData, stok_bahan: isNaN(val) ? 0 : val });
+                    }}
+                  />
+                ) : (
+                  <input 
+                    type={field.type}
+                    placeholder={field.placeholder} 
+                    className={`w-full pl-14 pr-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:border-[#2D4F53] transition-all placeholder:text-gray-300`}
+                    value={(formData as any)[field.key]}
+                    onChange={(e) => setFormData({ 
+                      ...formData, 
+                      [field.key]: e.target.value 
+                    })}
+                  />
+                )}
               </div>
             </div>
           ))}

@@ -1,188 +1,244 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { 
+import {
   Area, AreaChart, Bar, BarChart, ResponsiveContainer, XAxis, YAxis,
-  Tooltip, CartesianGrid, Cell 
+  Tooltip, CartesianGrid, Cell
 } from "recharts";
-import { Loader2, ChevronDown } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { Loader2, TrendingUp, Package, Zap } from "lucide-react";
+import { getTransactionChartData } from "@/app/actions/transaction";
+import { getStockChartData } from "@/app/actions/material";
 
-// --- HEADER CHART ---
-const ChartHeader = ({ 
-  title, subtitle, options, value, onChange 
-}: { title: string, subtitle: string, options: any[], value: string, onChange: any }) => (
-  <div className="flex justify-between items-start mb-2">
-    <div className="space-y-0.5 text-left">
-      <h3 className="font-extrabold text-[16px] text-[#161616] tracking-tight">{title}</h3>
-      <p className="text-[12px] text-zinc-400 font-medium">{subtitle}</p>
+// --- CUSTOM TOOLTIP ---
+const CustomAreaTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-white/80 backdrop-blur-md border border-white/20 rounded-2xl shadow-2xl p-4 text-left animate-in zoom-in-95 duration-200">
+        <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.1em] mb-1">{label}</p>
+        <p className="text-[16px] font-black text-[#1E1E1E]">
+          Rp {Number(payload[0].value).toLocaleString("id-ID")}
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
+
+const CustomBarTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    const val = payload[0].value;
+    const status = val === 0 ? "Habis" : val < 5 ? "Menipis" : "Aman";
+    const colorClass = val === 0 ? "text-rose-500" : val < 5 ? "text-amber-500" : "text-emerald-500";
+    return (
+      <div className="bg-white/80 backdrop-blur-md border border-white/20 rounded-2xl shadow-2xl p-4 text-left animate-in zoom-in-95 duration-200">
+        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.1em] mb-1">{label}</p>
+        <div className="flex items-baseline gap-2">
+           <p className={`text-[18px] font-black ${colorClass}`}>{val}</p>
+           <p className="text-[12px] font-bold text-zinc-400">Unit</p>
+        </div>
+        <p className={`text-[10px] font-black uppercase mt-1 px-2 py-0.5 rounded-md inline-block ${val === 0 ? "bg-rose-50" : val < 5 ? "bg-amber-50" : "bg-emerald-50"}`}>
+          {status}
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
+
+// --- EMPTY STATE ---
+const EmptyChart = ({ message, icon: Icon }: { message: string, icon: any }) => (
+  <div className="h-full flex flex-col items-center justify-center gap-3 text-center">
+    <div className="w-14 h-14 rounded-3xl bg-zinc-50 border border-zinc-100 flex items-center justify-center text-zinc-200">
+      <Icon size={24} />
     </div>
-    <div className="relative">
-      <select 
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="appearance-none text-[11px] font-bold border border-zinc-100 rounded-lg px-3 py-1.5 pr-8 text-zinc-500 bg-zinc-50/50 hover:bg-zinc-100 transition-colors outline-none cursor-pointer"
-      >
-        {options.map((opt) => (
-          <option key={opt.val} value={opt.val}>{opt.label}</option>
-        ))}
-      </select>
-      <ChevronDown size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
-    </div>
+    <p className="text-[13px] text-zinc-400 font-bold max-w-[150px] leading-relaxed">{message}</p>
   </div>
 );
 
-// --- 1. AREA CHART (AKTIVITAS TRANSAKSI) ---
+// --- 1. AREA CHART (Fixed 7 Days) ---
 export function TransactionAreaChart() {
   const [data, setData] = useState<any[]>([]);
-  const [range, setRange] = useState("7");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchTransactionData = async () => {
+    const fetchData = async () => {
       setLoading(true);
       try {
-        const dateLimit = new Date();
-        dateLimit.setDate(dateLimit.getDate() - parseInt(range));
-
-        const { data: trans } = await supabase
-          .from('transaksi')
-          .select('tanggal, total_bayar')
-          .gte('tanggal', dateLimit.toISOString())
-          .order('tanggal', { ascending: true });
-
-        if (trans) {
-          const grouped = trans.reduce((acc: any, curr: any) => {
-            const dateLabel = new Date(curr.tanggal).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' });
-            acc[dateLabel] = (acc[dateLabel] || 0) + Number(curr.total_bayar);
-            return acc;
-          }, {});
-
-          setData(Object.keys(grouped).map(key => ({ name: key, value: grouped[key] })));
-        }
+        const chartData = await getTransactionChartData(7);
+        setData(chartData || []);
       } catch (err) {
         console.error(err);
+        setData([]);
       } finally {
         setLoading(false);
       }
     };
-    fetchTransactionData();
-  }, [range]);
+    fetchData();
+  }, []);
+
+  const totalValue = data.reduce((acc, d) => acc + (d.value || 0), 0);
 
   return (
-    <div className="w-full h-full flex flex-col">
-      <ChartHeader 
-        title="Aktivitas Transaksi" 
-        subtitle="Tren pendapatan harian" 
-        value={range}
-        onChange={setRange}
-        options={[{ label: "7 Hari", val: "7" }, { label: "30 Hari", val: "30" }]}
-      />
-      
-      <div className="flex-1 w-full relative mt-4">
-        {loading && (
-          <div className="absolute inset-0 flex items-center justify-center z-10">
-            <Loader2 className="animate-spin text-zinc-200" />
+    <div className="w-full flex flex-col h-full font-sans">
+      <div className="flex justify-between items-start mb-6">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-indigo-50 flex items-center justify-center shrink-0 shadow-sm border border-indigo-100">
+            <TrendingUp size={18} className="text-indigo-600" />
           </div>
+          <div>
+            <h3 className="font-black text-[15px] text-[#1E1E1E] leading-tight">Aktivitas Transaksi</h3>
+            <p className="text-[11px] text-zinc-400 font-medium">Grafik pendapatan 7 hari terakhir</p>
+          </div>
+        </div>
+        <div className="px-3 py-1.5 bg-indigo-50/50 border border-indigo-100 rounded-full">
+            <span className="text-[10px] font-black text-indigo-600 uppercase tracking-wider">Live Monitoring</span>
+        </div>
+      </div>
+
+      {!loading && data.length > 0 && (
+        <div className="mb-6">
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-[28px] font-black text-[#1E1E1E] tracking-tighter">
+              Rp {totalValue >= 1000000 ? `${(totalValue / 1000000).toFixed(1)}jt` : totalValue.toLocaleString("id-ID")}
+            </span>
+            <div className="flex items-center gap-1 text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded-lg">
+              <Zap size={10} fill="currentColor" />
+              <span className="text-[10px] font-black">ACTIVE</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div style={{ height: 220 }} className="w-full relative">
+        {loading ? (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <Loader2 className="animate-spin text-indigo-400" size={24} />
+          </div>
+        ) : data.length === 0 ? (
+          <EmptyChart message="Belum ada data transaksi dalam 7 hari ini" icon={TrendingUp} />
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={data} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+              <defs>
+                <linearGradient id="colorIndigo" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#6366f1" stopOpacity={0.3} />
+                  <stop offset="100%" stopColor="#6366f1" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+              <XAxis
+                dataKey="name"
+                axisLine={false}
+                tickLine={false}
+                fontSize={10}
+                tick={{ fill: "#94a3b8", fontWeight: 800 }}
+                dy={12}
+              />
+              <YAxis hide />
+              <Tooltip content={<CustomAreaTooltip />} />
+              <Area
+                type="monotone"
+                dataKey="value"
+                stroke="#6366f1"
+                strokeWidth={4}
+                fillOpacity={1}
+                fill="url(#colorIndigo)"
+                dot={{ fill: "#6366f1", r: 4, strokeWidth: 3, stroke: "#fff" }}
+                activeDot={{ r: 6, fill: "#4f46e5", strokeWidth: 4, stroke: "#fff" }}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
         )}
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
-            <defs>
-              <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.15}/>
-                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f8fafc" />
-            <XAxis dataKey="name" axisLine={false} tickLine={false} fontSize={10} tick={{fill: '#94a3b8'}} dy={10} />
-            <YAxis hide />
-            <Tooltip 
-              contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)', fontSize: '12px', fontWeight: 'bold' }}
-              formatter={(val: any) => [`Rp ${Number(val).toLocaleString('id-ID')}`, 'Total']}
-            />
-            <Area type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorValue)" />
-          </AreaChart>
-        </ResponsiveContainer>
       </div>
     </div>
   );
 }
 
-// --- 2. BAR CHART (STOK BAHAN) ---
+// --- 2. BAR CHART ---
 export function StockBarChart() {
   const [data, setData] = useState<any[]>([]);
-  const [filter, setFilter] = useState("all");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchStockData = async () => {
+    const fetchData = async () => {
       setLoading(true);
       try {
-        let query = supabase
-          .from('stok_bahan')
-          .select('nama_bahan, stok_bahan')
-          .order('stok_bahan', { ascending: true });
-
-        if (filter === "critical") query = query.lt('stok_bahan', 5);
-        
-        const { data: stocks } = await query.limit(6);
-
-        if (stocks) {
-          setData(stocks.map(s => ({ name: s.nama_bahan, value: s.stok_bahan })));
-        }
+        const chartData = await getStockChartData("all");
+        setData(chartData || []);
       } catch (err) {
         console.error(err);
+        setData([]);
       } finally {
         setLoading(false);
       }
     };
-    fetchStockData();
-  }, [filter]);
+    fetchData();
+  }, []);
+
+  const habisCount = data.filter(d => d.value === 0).length;
+  const menipisCount = data.filter(d => d.value > 0 && d.value < 5).length;
 
   return (
-    <div className="w-full h-full flex flex-col">
-      <ChartHeader 
-        title="Stok Bahan Terendah" 
-        subtitle="Item yang harus segera dibeli" 
-        value={filter}
-        onChange={setFilter}
-        options={[{ label: "Semua Bahan", val: "all" }, { label: "Kritis", val: "critical" }]}
-      />
-      
-      <div className="flex justify-start gap-4 mt-1 mb-4">
-        <div className="flex items-center gap-1.5 text-[9px] font-black text-zinc-400 uppercase tracking-widest">
-          <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span> Habis
-        </div>
-        <div className="flex items-center gap-1.5 text-[9px] font-black text-zinc-400 uppercase tracking-widest">
-          <span className="w-1.5 h-1.5 rounded-full bg-orange-400"></span> Menipis
+    <div className="w-full flex flex-col h-full font-sans">
+      <div className="flex justify-between items-start mb-6">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-amber-50 flex items-center justify-center shrink-0 shadow-sm border border-amber-100">
+            <Package size={18} className="text-amber-600" />
+          </div>
+          <div>
+            <h3 className="font-black text-[15px] text-[#1E1E1E] leading-tight">Status Inventori</h3>
+            <p className="text-[11px] text-zinc-400 font-medium">Monitoring ketersediaan bahan</p>
+          </div>
         </div>
       </div>
 
-      <div className="flex-1 w-full relative">
-        {loading && (
-          <div className="absolute inset-0 flex items-center justify-center z-10">
-            <Loader2 className="animate-spin text-zinc-200" />
+      <div className="flex items-center gap-3 mb-6">
+        <div className="flex-1 flex flex-col p-3 bg-rose-50 rounded-2xl border border-rose-100">
+          <span className="text-[10px] font-black text-rose-500 uppercase tracking-widest mb-1">Habis</span>
+          <span className="text-[18px] font-black text-rose-600 leading-none">{habisCount} <small className="text-[10px]">Item</small></span>
+        </div>
+        <div className="flex-1 flex flex-col p-3 bg-amber-50 rounded-2xl border border-amber-100">
+          <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest mb-1">Menipis</span>
+          <span className="text-[18px] font-black text-amber-600 leading-none">{menipisCount} <small className="text-[10px]">Item</small></span>
+        </div>
+      </div>
+
+      <div style={{ height: 220 }} className="w-full relative">
+        {loading ? (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <Loader2 className="animate-spin text-amber-400" size={24} />
           </div>
+        ) : data.length === 0 ? (
+          <EmptyChart message="Semua stok bahan dalam kondisi aman dan tersedia" icon={Package} />
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={data} margin={{ top: 5, right: 5, left: -20, bottom: 0 }} barCategoryGap="35%">
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+              <XAxis
+                dataKey="name"
+                axisLine={false}
+                tickLine={false}
+                fontSize={10}
+                tick={{ fill: "#94a3b8", fontWeight: 800 }}
+                dy={12}
+              />
+              <YAxis hide />
+              <Tooltip content={<CustomBarTooltip />} cursor={{ fill: "#f8fafc", radius: 12 }} />
+              <Bar dataKey="value" radius={[10, 10, 10, 10]}>
+                {data.map((entry, index) => {
+                    const color = entry.value === 0 ? "#f43f5e" : entry.value < 5 ? "#fbbf24" : "#10b981";
+                    return (
+                        <Cell
+                            key={`cell-${index}`}
+                            fill={color}
+                            className="transition-all duration-300 hover:opacity-80"
+                        />
+                    );
+                })}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
         )}
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ top: 0, right: 10, left: -30, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f8fafc" />
-            <XAxis dataKey="name" axisLine={false} tickLine={false} fontSize={10} tick={{fill: '#94a3b8'}} dy={10} />
-            <YAxis hide />
-            <Tooltip 
-              cursor={{fill: '#f1f5f9', opacity: 0.4}}
-              contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)', fontSize: '12px' }}
-            />
-            <Bar dataKey="value" radius={[8, 8, 0, 0]} barSize={32}>
-              {data.map((entry, index) => (
-                <Cell 
-                  key={`cell-${index}`} 
-                  fill={entry.value === 0 ? '#ef4444' : entry.value < 5 ? '#fb923c' : '#e2e8f0'} 
-                />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
       </div>
     </div>
   );

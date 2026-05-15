@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, Calendar } from "lucide-react";
+import { Calendar } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 interface HeaderProps {
@@ -21,11 +21,11 @@ const routeConfig: Record<string, { title: string; desc: string }> = {
 
 export default function Header({ role, name }: HeaderProps) {
   const pathname = usePathname();
-  
+
   // Ambil config berdasarkan path, jika tidak ada pakai default
-  const pageInfo = routeConfig[pathname] || { 
-    title: `Selamat Datang, ${name}`, 
-    desc: "Selamat bekerja, pastikan data toko selalu up-to-date." 
+  const pageInfo = routeConfig[pathname] || {
+    title: `Selamat Datang, ${name}`,
+    desc: "Selamat bekerja, pastikan data toko selalu up-to-date."
   };
 
   const currentDate = new Date().toLocaleDateString('id-ID', {
@@ -44,12 +44,8 @@ export default function Header({ role, name }: HeaderProps) {
 
       {/* Bagian Kanan: Notifications, Date, & Role */}
       <div className="flex items-center gap-4">
-        <div className="bg-white p-2 rounded-lg border border-zinc-200 text-zinc-600 hover:bg-zinc-50 cursor-pointer">
-          <Bell size={20} />
-        </div>
-
         <div className="bg-white px-4 py-2 rounded-lg border border-zinc-200 flex items-center gap-2 text-sm text-zinc-600">
-          <Calendar size={16} /> 
+          <Calendar size={16} />
           {currentDate}
         </div>
 

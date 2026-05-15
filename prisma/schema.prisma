@@ -5,15 +5,45 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
+enum Role {
+  ADMIN
+  KASIR
+}
+
+enum Status {
+  AKTIF
+  NONAKTIF
+}
+
+enum TransactionStatus {
+  LUNAS
+  DP_BAYAR
+}
+
+enum PaymentMethod {
+  CASH
+  TRANSFER_BANK
+  QRIS
+}
+
+enum OrderStatus {
+  DIPROSES
+  SELESAI
+  BATAL
+}
 // 1. Data User (Untuk Login Kasir/Admin)
 model User {
   id        String   @id @default(uuid())
   username  String   @unique
+  name      String?
   password  String
-  role      String   // "admin" atau "kasir"
+  role      Role     @default(KASIR)
+  status    Status   @default(AKTIF)
   createdAt DateTime @default(now())
 }
 
@@ -21,37 +51,65 @@ model User {
 model Customer {
   id           String        @id @default(uuid())
   name         String
-  phone        String
+  phone        String?
   address      String?
   transactions Transaction[]
   createdAt    DateTime      @default(now())
 }
 
-// 3. Data Jasa Reparasi
+// 3. Data Jasa Reparasi (Service)
 model Service {
-  id          String   @id @default(uuid())
-  name        String
-  category    String
-  price       Int
-  createdAt   DateTime @default(now())
-}
-
-// 4. Data Bahan (Inventory)
-model Material {
   id        String   @id @default(uuid())
-  name      String
-  stock     Int
-  unit      String   // misal: "pcs", "kg", "meter"
-  updatedAt DateTime @updatedAt
+  name      String   // nama_jasa
+  category  String   // kategori
+  price     Int      @default(0) // harga
+  status    String   @default("Aktif") // "Aktif" atau "Nonaktif"
+  createdAt DateTime @default(now())
 }
 
-// 5. Data Transaksi
-model Transaction {
-  id              String   @id @default(uuid())
-  customer        Customer @relation(fields: [customerId], references: [id])
-  customerId      String
-  totalPrice      Int
-  status          String   // "Diproses", "Selesai", "Dibatalkan"
-  paymentStatus   String   // "Lunas", "DP Bayar", "Belum Bayar"
-  createdAt       DateTime @default(now())
+// 4. Data Bahan (Inventory/Material)
+model Material {
+  id         String   @id @default(uuid())
+  name       String   // nama_bahan
+  variant    String?  // varian
+  category   String?  // kategori
+  stock      Int      @default(0)
+  unit       String   // misal: "pcs", "kg", "meter"
+  price      Int      @default(0)
+  updatedAt  DateTime @updatedAt
+  createdAt  DateTime @default(now())
 }
+
+// 5. Riwayat Arus Bahan
+model MaterialHistory {
+  id        String   @id @default(uuid())
+  bahan     String   // Nama bahan
+  varian    String?
+  kategori  String?
+  type      String   // "Masuk" atau "Keluar"
+  qty       Int
+  ref       String?  // Referensi
+  tanggal   DateTime @default(now())
+}
+
+// 6. Data Transaksi
+model Transaction {
+  id                String   @id @default(uuid())
+  invoiceCode       String?  @unique
+  customer          Customer? @relation(fields: [customerId], references: [id])
+  customerId        String?
+  customerName      String?
+  serviceName       String?  // jenis_jasa
+  category          String?  // kategori
+  notes             String?  // catatan
+  totalAmount       Int      @default(0)
+  dpAmount          Int      @default(0)
+  paymentStatus     TransactionStatus @default(DP_BAYAR)
+
+  orderStatus       String   @default("Diproses") // "Antri", "Diproses", "Selesai", "Dibatalkan"
+  paymentMethod     String?  // metode_pembayaran
+  isDeleted         Boolean  @default(false)
+  createdAt         DateTime @default(now())
+
+}
+

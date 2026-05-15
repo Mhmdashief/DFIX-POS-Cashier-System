@@ -5,7 +5,7 @@ import {
   User, FileText, LayoutList, CreditCard, 
   Package, Edit3, Calendar, Clock, ChevronLeft 
 } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { getTransactionById } from "@/app/actions/transaction";
 
 const formatIDR = (n: number) => 
   new Intl.NumberFormat("id-ID", { 
@@ -21,11 +21,7 @@ export default function DetailTransaksiView({ id }: { id: string }) {
   useEffect(() => {
     const fetchDetail = async () => {
       setLoading(true);
-      const { data: res } = await supabase
-        .from('transaksi')
-        .select('*')
-        .eq('id', id)
-        .single();
+      const res = await getTransactionById(id);
       setData(res);
       setLoading(false);
     };

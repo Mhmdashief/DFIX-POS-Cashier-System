@@ -14,10 +14,10 @@ export default function ModalTambahPengguna({ isOpen, onClose, onSave, initialDa
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
-    email: "",
+    username: "",
     password: "",
-    role: "kasir",
-    status: "aktif",
+    role: "KASIR",
+    status: "AKTIF",
   });
 
   // Efek untuk mengisi form saat Edit Pengguna diklik
@@ -25,19 +25,19 @@ export default function ModalTambahPengguna({ isOpen, onClose, onSave, initialDa
     if (initialData) {
       setFormData({
         name: initialData.name || "",
-        email: initialData.email || "",
+        username: initialData.username || "",
         password: initialData.password || "",
-        role: initialData.role || "kasir",
-        status: initialData.status || "aktif",
+        role: initialData.role || "KASIR",
+        status: initialData.status || "AKTIF",
       });
     } else {
       // Reset form jika Tambah Pengguna (Baru)
       setFormData({
         name: "",
-        email: "",
+        username: "",
         password: "",
-        role: "kasir",
-        status: "aktif",
+        role: "KASIR",
+        status: "AKTIF",
       });
     }
   }, [initialData, isOpen]);
@@ -82,19 +82,19 @@ export default function ModalTambahPengguna({ isOpen, onClose, onSave, initialDa
             </div>
           </div>
 
-          {/* Email */}
+          {/* Username */}
           <div className="space-y-2">
-            <label className="text-[14px] font-bold text-[#161616]">Email / Username</label>
+            <label className="text-[14px] font-bold text-[#161616]">Username</label>
             <div className="relative">
               <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#F2C94C]" />
               <div className="absolute left-10 top-1/2 -translate-y-1/2 w-[1px] h-4 bg-zinc-200" />
               <input
                 required
-                type="email"
-                value={formData.email}
-                placeholder="Masukkan email"
+                type="text"
+                value={formData.username}
+                placeholder="Masukkan username"
                 className="w-full pl-14 pr-4 py-3.5 rounded-xl border border-zinc-200 text-[14px] focus:outline-none focus:border-zinc-400"
-                onChange={(e) => setFormData({...formData, email: e.target.value})}
+                onChange={(e) => setFormData({...formData, username: e.target.value})}
               />
             </div>
           </div>
@@ -130,8 +130,8 @@ export default function ModalTambahPengguna({ isOpen, onClose, onSave, initialDa
                   className="w-full pl-14 pr-10 py-3.5 rounded-xl border border-zinc-200 text-[14px] appearance-none bg-white text-zinc-600 focus:outline-none"
                   onChange={(e) => setFormData({...formData, role: e.target.value})}
                 >
-                  <option value="kasir">Kasir</option>
-                  <option value="admin">Admin</option>
+                  <option value="KASIR">Kasir</option>
+                  <option value="ADMIN">Admin</option>
                 </select>
                 <ChevronDown size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
               </div>
@@ -147,8 +147,8 @@ export default function ModalTambahPengguna({ isOpen, onClose, onSave, initialDa
                   className="w-full pl-14 pr-10 py-3.5 rounded-xl border border-zinc-200 text-[14px] appearance-none bg-white text-zinc-600 focus:outline-none"
                   onChange={(e) => setFormData({...formData, status: e.target.value})}
                 >
-                  <option value="aktif">Aktif</option>
-                  <option value="nonaktif">Nonaktif</option>
+                  <option value="AKTIF">Aktif</option>
+                  <option value="NONAKTIF">Nonaktif</option>
                 </select>
                 <ChevronDown size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
               </div>

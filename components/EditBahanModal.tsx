@@ -1,159 +1,199 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Minus } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { X, Copy, Package, Tag, Hash, Box } from 'lucide-react';
+import { saveMaterialAction } from '@/app/actions/material';
 
-export default function EditBahanModal({ isOpen, onClose, onSave, initialData }: any) {
-  const [mode, setMode] = useState('tambah'); // Default: tambah
-  const [jumlah, setJumlah] = useState(0);
-  const [alasan, setAlasan] = useState("");
+interface EditBahanModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: () => void;
+  initialData?: any;
+}
 
-  // Sinkronisasi data saat modal dibuka
+const EditBahanModal: React.FC<EditBahanModalProps> = ({ isOpen, onClose, onSave, initialData }) => {
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    nama_bahan: "",
+    varian: "",
+    kategori: "",
+    stok_bahan: 0,
+    satuan: "Pcs",
+  });
+
   useEffect(() => {
-    if (isOpen && initialData) {
-      // Sesuai permintaan: Start dari angka stok yang sudah ada
-      setJumlah(Number(initialData.stok_bahan) || 0);
-      setAlasan("");
-      setMode('tambah'); 
+    if (initialData && isOpen) {
+      setFormData({
+        nama_bahan: initialData.name || "",
+        varian: initialData.variant || "",
+        kategori: initialData.category || "",
+        stok_bahan: initialData.stock || 0,
+        satuan: initialData.unit || "Pcs",
+      });
     }
-  }, [isOpen, initialData]);
-
-  if (!isOpen) return null;
+  }, [initialData, isOpen]);
 
   const handleSimpan = async () => {
-    const currentStok = Number(initialData?.stok_bahan) || 0;
-    let newStok = currentStok;
-
-    // Logika perhitungan berdasarkan pilihan mode di UI
-    if (mode === 'tambah') {
-      // Jika mode tambah, angka input dijumlahkan ke stok lama
-      newStok = currentStok + jumlah;
-    } else if (mode === 'kurangi') {
-      // Jika mode kurangi, stok lama dikurangi angka input
-      newStok = Math.max(0, currentStok - jumlah);
-    } else if (mode === 'set_ulang') {
-      // Jika set ulang, langsung ganti ke angka input
-      newStok = jumlah;
+    if (!formData.nama_bahan) {
+      alert("Nama bahan harus diisi!");
+      return;
     }
 
-    const { error } = await supabase
-      .from('stok_bahan')
-      .update({ 
-        stok_bahan: newStok, 
-        updated_at: new Date().toISOString() 
-      })
-      .eq('id', initialData.id);
+    setLoading(true);
+    try {
+      const dataToSave = {
+        name: formData.nama_bahan,
+        variant: formData.varian,
+        category: formData.kategori,
+        stock: formData.stok_bahan,
+        unit: formData.satuan,
+      };
 
-    if (!error) {
-      onSave();
+      const result = await saveMaterialAction(dataToSave, initialData?.id);
+
+      if (!result.success) {
+        throw new Error(result.error);
+      }
+
+      onSave(); // Trigger refetch and show success modal in parent
       onClose();
-    } else {
+    } catch (error: any) {
       alert("Error: " + error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
+  if (!isOpen) return null;
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="w-full max-w-[440px] bg-white rounded-[32px] p-8 shadow-2xl relative animate-in zoom-in-95 duration-200">
+      <div className="w-full max-w-[440px] bg-white rounded-[32px] shadow-2xl overflow-hidden font-sans animate-in zoom-in-95 duration-200">
         
-        {/* Header Sesuai Gambar */}
-        <div className="flex justify-between items-center mb-10">
-          <h2 className="text-[22px] font-semibold text-[#1E1E1E]">Penyesuaian Stock</h2>
+        {/* Header */}
+        <div className="flex items-center justify-between px-8 py-6 border-b border-gray-50 bg-gray-50/30">
+          <div>
+            <h2 className="text-xl font-bold text-[#1E1E1E]">Edit Detail Bahan</h2>
+            <p className="text-[12px] text-gray-400 font-medium">Ubah informasi stok dan detail material</p>
+          </div>
           <button 
-            onClick={onClose} 
-            className="p-2 border border-gray-100 rounded-full text-gray-400 hover:bg-gray-50 transition-all shadow-sm"
+            onClick={onClose}
+            className="p-2 rounded-full border border-gray-200 text-gray-400 hover:bg-gray-100 transition-colors shadow-sm"
           >
-            <X size={20} />
+            <X size={18} />
           </button>
         </div>
 
-        <div className="space-y-8">
+        {/* Form Body */}
+        <div className="p-8 space-y-5">
           
-          {/* Section Mode - Checkbox Style (Radio) */}
-          <div className="space-y-4">
-            <p className="text-[16px] font-semibold text-[#1E1E1E]">Mode</p>
-            <div className="flex items-center gap-8">
-              {[
-                { id: 'tambah', label: 'Tambah' },
-                { id: 'kurangi', label: 'Kurangi' },
-                { id: 'set_ulang', label: 'Set Ulang' }
-              ].map((m) => (
-                <label key={m.id} className="flex items-center gap-3 cursor-pointer group">
-                  <div className="relative flex items-center justify-center">
-                    <input 
-                      type="radio" 
-                      name="mode" 
-                      checked={mode === m.id}
-                      onChange={() => setMode(m.id)}
-                      className="peer appearance-none w-5 h-5 border-2 border-gray-300 rounded-md checked:border-[#2D4F53] checked:bg-[#2D4F53] transition-all cursor-pointer"
-                    />
-                    {/* Checkmark icon yang muncul saat dipilih */}
-                    <div className="absolute hidden peer-checked:block text-white">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                    </div>
-                  </div>
-                  <span className="text-[16px] font-medium text-gray-700 group-hover:text-black transition-colors">{m.label}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          {/* Section Jumlah Barang dengan Stepper di Kanan */}
-          <div className="flex justify-between items-center">
-            <p className="text-[16px] font-semibold text-[#1E1E1E]">
-              Jumlah Barang/<span className="text-gray-400 font-normal">{initialData?.satuan || 'Pcs'}</span>
-            </p>
-            <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden h-12 bg-white shadow-sm">
-              <button 
-                onClick={() => setJumlah(prev => prev + 1)}
-                className="px-4 hover:bg-gray-50 border-r border-gray-200 h-full transition-colors active:bg-gray-100"
-              >
-                <Plus size={18} className="text-gray-600" />
-              </button>
+          <div className="space-y-2">
+            <label className="text-[13px] font-bold text-gray-700 uppercase tracking-wider">Nama Bahan</label>
+            <div className="relative flex items-center">
+              <div className="absolute left-4 text-[#2D4F53]">
+                <Package size={18} />
+              </div>
               <input 
-                type="number" 
-                className="w-16 text-center outline-none font-bold text-[#1E1E1E] text-[16px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
-                value={jumlah}
-                onChange={(e) => setJumlah(Math.max(0, parseInt(e.target.value) || 0))}
+                type="text"
+                placeholder="Contoh: Cat Warna Hitam" 
+                className="w-full pl-12 pr-4 py-3.5 bg-gray-50/50 border border-gray-200 rounded-2xl focus:outline-none focus:border-[#2D4F53] focus:bg-white transition-all text-[14px] font-medium"
+                value={formData.nama_bahan}
+                onChange={(e) => setFormData({ ...formData, nama_bahan: e.target.value })}
               />
-              <button 
-                onClick={() => setJumlah(prev => Math.max(0, prev - 1))}
-                className="px-4 hover:bg-gray-50 border-l border-gray-200 h-full transition-colors active:bg-gray-100"
-              >
-                <Minus size={18} className="text-gray-600" />
-              </button>
             </div>
           </div>
 
-          {/* Section Alasan */}
-          <div className="space-y-3">
-            <p className="text-[16px] font-semibold text-[#1E1E1E]">Alasan</p>
-            <textarea 
-              placeholder="Barang sudah ditambah untuk transaksi"
-              className="w-full p-4 border border-gray-200 rounded-[20px] h-28 outline-none focus:border-[#2D4F53] focus:ring-1 focus:ring-[#2D4F53] transition-all text-gray-600 placeholder:text-gray-300 resize-none text-[15px]"
-              value={alasan}
-              onChange={(e) => setAlasan(e.target.value)}
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-[13px] font-bold text-gray-700 uppercase tracking-wider">Varian</label>
+              <div className="relative flex items-center">
+                <div className="absolute left-4 text-[#2D4F53]">
+                  <Tag size={16} />
+                </div>
+                <input 
+                  type="text"
+                  placeholder="Hitam" 
+                  className="w-full pl-11 pr-4 py-3 bg-gray-50/50 border border-gray-200 rounded-xl focus:outline-none focus:border-[#2D4F53] focus:bg-white transition-all text-[14px] font-medium"
+                  value={formData.varian}
+                  onChange={(e) => setFormData({ ...formData, varian: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-[13px] font-bold text-gray-700 uppercase tracking-wider">Kategori</label>
+              <div className="relative flex items-center">
+                <div className="absolute left-4 text-[#2D4F53]">
+                  <Box size={16} />
+                </div>
+                <input 
+                  type="text"
+                  placeholder="Cat" 
+                  className="w-full pl-11 pr-4 py-3 bg-gray-50/50 border border-gray-200 rounded-xl focus:outline-none focus:border-[#2D4F53] focus:bg-white transition-all text-[14px] font-medium"
+                  value={formData.kategori}
+                  onChange={(e) => setFormData({ ...formData, kategori: e.target.value })}
+                />
+              </div>
+            </div>
           </div>
 
-          {/* Footer Buttons Sesuai Gambar */}
-          <div className="flex gap-4 pt-4">
-            <button 
-              onClick={handleSimpan}
-              className="flex-[1.5] bg-[#214144] text-white py-4 rounded-[18px] font-bold text-[16px] hover:bg-[#1a3436] active:scale-[0.98] transition-all shadow-lg shadow-gray-200"
-            >
-              Simpan
-            </button>
-            <button 
-              onClick={onClose}
-              className="flex-1 border border-gray-200 text-gray-500 py-4 rounded-[18px] font-bold text-[16px] hover:bg-gray-50 transition-all active:scale-[0.98]"
-            >
-              Batal
-            </button>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-[13px] font-bold text-gray-700 uppercase tracking-wider">Jumlah Stok</label>
+              <div className="relative flex items-center">
+                <div className="absolute left-4 text-[#2D4F53]">
+                  <Hash size={16} />
+                </div>
+                <input 
+                  type="number"
+                  placeholder="0" 
+                  className="w-full pl-11 pr-4 py-3 bg-gray-50/50 border border-gray-200 rounded-xl focus:outline-none focus:border-[#2D4F53] focus:bg-white transition-all text-[14px] font-black text-[#2D4F53] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  value={formData.stok_bahan === 0 ? "" : formData.stok_bahan}
+                  onChange={(e) => {
+                    const val = e.target.value === "" ? 0 : parseInt(e.target.value);
+                    setFormData({ ...formData, stok_bahan: isNaN(val) ? 0 : val });
+                  }}
+                />
+
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-[13px] font-bold text-gray-700 uppercase tracking-wider">Satuan</label>
+              <div className="relative flex items-center">
+                <div className="absolute left-4 text-[#2D4F53]">
+                  <Copy size={16} />
+                </div>
+                <input 
+                  type="text"
+                  placeholder="Pcs" 
+                  className="w-full pl-11 pr-4 py-3 bg-gray-50/50 border border-gray-200 rounded-xl focus:outline-none focus:border-[#2D4F53] focus:bg-white transition-all text-[14px] font-medium"
+                  value={formData.satuan}
+                  onChange={(e) => setFormData({ ...formData, satuan: e.target.value })}
+                />
+              </div>
+            </div>
           </div>
         </div>
+
+        {/* Footer Buttons */}
+        <div className="p-8 pt-2 flex gap-4 bg-gray-50/30">
+          <button 
+            disabled={loading}
+            className="flex-[2] py-4 bg-[#2D4F53] text-white font-bold rounded-2xl hover:bg-[#233e41] transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-[#2D4F53]/20"
+            onClick={handleSimpan}
+          >
+            {loading ? "Menyimpan..." : "Perbarui Data"}
+          </button>
+          <button 
+            className="flex-1 py-4 bg-white border border-gray-200 text-gray-500 font-bold rounded-2xl hover:bg-gray-50 transition-all active:scale-95 shadow-sm"
+            onClick={onClose}
+          >
+            Batal
+          </button>
+        </div>
+
       </div>
     </div>
   );
-}
+};
+
+export default EditBahanModal;

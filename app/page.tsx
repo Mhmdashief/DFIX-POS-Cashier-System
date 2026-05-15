@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { supabase } from '@/lib/supabase' 
+import { signIn } from 'next-auth/react'
 
 export default function LoginPage() {
   const [isPending, setIsPending] = useState(false)
@@ -14,38 +14,34 @@ export default function LoginPage() {
     setIsPending(true)
     setError(null)
 
-    const email = formData.get('email') as string
+    const username = formData.get('username') as string
     const password = formData.get('password') as string
 
     try {
-      // 1. Query langsung ke tabel User di Supabase
-      const { data: user, error: dbError } = await supabase
-        .from('User')
-        .select('*')
-        .eq('email', email)
-        .eq('password', password)
-        .maybeSingle()
+      const res = await signIn('credentials', {
+        username,
+        password,
+        redirect: false,
+      })
 
-      // 2. Cek jika ada error database (seperti 406 yang tadi)
-      if (dbError) {
-        console.error('Database Error:', dbError)
-        setError('Gagal terhubung ke database. Pastikan RLS sudah di-disable.')
+      if (res?.error) {
+        setError('Username atau kata sandi salah!')
         setIsPending(false)
         return
       }
 
-      // 3. Cek jika user tidak ditemukan
-      if (!user) {
-        setError('Email atau kata sandi salah!')
-        setIsPending(false)
-        return
-      }
-
-      // 4. Berhasil Login - Arahkan berdasarkan Role
-      // Simpan role di localStorage (opsional, untuk proteksi client-side sederhana)
-      localStorage.setItem('user_role', user.role)
+      // Berhasil Login - NextAuth akan menangani session
+      // Kita bisa cek session di client atau redirect saja
+      // Karena kita pakai redirect: false, kita harus manual push
       
-      if (user.role === 'admin') {
+      // Ambil role bisa via session, tapi untuk simpelnya kita redirect ke dashboard masing-masing
+      // Biasanya admin punya rute berbeda. Untuk sementara kita arahkan ke /admin atau /kasir
+      // berdasarkan respon atau biarkan middleware menangani.
+      // Namun karena kita butuh role, kita panggil /api/auth/session
+      const sessionRes = await fetch('/api/auth/session');
+      const session = await sessionRes.json();
+      
+      if (session?.user?.role === 'ADMIN') {
         router.push('/admin')
       } else {
         router.push('/kasir')
@@ -92,14 +88,14 @@ export default function LoginPage() {
         <form action={handleSubmit} className="flex flex-col gap-4">
           <div>
             <label className="mb-2 block text-sm font-medium text-zinc-900 dark:text-zinc-300">
-              Email
+              Username
             </label>
             <input
-              name="email"
-              type="email"
+              name="username"
+              type="text"
               required
               className="w-full rounded-lg border border-zinc-300 bg-transparent p-3 text-sm outline-none focus:border-black focus:ring-1 focus:ring-black dark:border-zinc-700 dark:text-white"
-              placeholder="admin@dfix.com"
+              placeholder="admin_dfix"
             />
           </div>
 

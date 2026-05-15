@@ -11,7 +11,8 @@ interface ModalJasaProps {
 }
 
 export default function ModalJasa({ isOpen, onClose, onSave, initialData }: ModalJasaProps) {
-  const categories = ["Sepatu", "Tas", "Koper", "Jaket", "Sofa", "Helm"];
+  const categories = ["Sepatu", "Tas", "Koper", "Jaket", "Sofa"];
+
   
   const [formData, setFormData] = useState({
     nama_jasa: "",
@@ -22,13 +23,16 @@ export default function ModalJasa({ isOpen, onClose, onSave, initialData }: Moda
   useEffect(() => {
     if (initialData) {
       setFormData({
-        nama_jasa: initialData.nama_jasa || "",
-        kategori: Array.isArray(initialData.kategori) ? initialData.kategori : (initialData.kategori?.split(',') || []),
+        nama_jasa: initialData.name || "",
+        kategori: typeof initialData.kategori === 'string' 
+          ? initialData.kategori.split(',').map((s: string) => s.trim())
+          : (Array.isArray(initialData.kategori) ? initialData.kategori : []),
         status: initialData.status || "Aktif"
       });
     } else {
       setFormData({ nama_jasa: "", kategori: [], status: "Aktif" });
     }
+
   }, [initialData, isOpen]);
 
   const handleCheckboxChange = (cat: string) => {
@@ -48,7 +52,8 @@ export default function ModalJasa({ isOpen, onClose, onSave, initialData }: Moda
         
         {/* Header */}
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold text-zinc-800">Tambah Jasa</h2>
+          <h2 className="text-xl font-bold text-zinc-800">{initialData ? "Edit Jasa" : "Tambah Jasa"}</h2>
+
           <button onClick={onClose} className="p-1.5 border border-zinc-100 rounded-full hover:bg-zinc-50 text-zinc-500 transition-colors">
             <X size={18} />
           </button>

@@ -6,109 +6,11 @@ import {
   ArrowUpRight, Users, RefreshCw, Eye, Edit3, Trash2, ChevronLeft 
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { getDashboardStats, updateTransactionStatusAction, deleteTransactionAction, updatePaymentStatusAction } from "@/app/actions/transaction";
 import { TransactionAreaChart, StockBarChart } from "@/components/DashboardCharts";
+import { StatCard } from "@/components/StatCard";
 
-// --- KOMPONEN DROPDOWN AKSI ---
-function ActionDropdown({ item, onRefresh }: { item: any, onRefresh: () => void }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [showStatusOptions, setShowStatusOptions] = useState(false);
-  const router = useRouter();
 
-  useEffect(() => {
-    const handleClickOutside = () => {
-      setIsOpen(false);
-      setShowStatusOptions(false);
-    };
-    if (isOpen) window.addEventListener('click', handleClickOutside);
-    return () => window.removeEventListener('click', handleClickOutside);
-  }, [isOpen]);
-
-  const handleUpdateStatus = async (newStatus: string) => {
-    try {
-      const { error } = await supabase
-        .from('transaksi')
-        .update({ status: newStatus })
-        .eq('id', item.id);
-      if (error) throw error;
-      onRefresh();
-      setIsOpen(false);
-    } catch (err) {
-      alert("Gagal mengubah status");
-    }
-  };
-
-  const handleDelete = async () => {
-    if (confirm("Hapus data reparasi ini?")) {
-      const { error } = await supabase.from('transaksi').delete().eq('id', item.id);
-      if (!error) onRefresh();
-    }
-  };
-
-  return (
-    <div className="relative" onClick={(e) => e.stopPropagation()}>
-      <button onClick={() => setIsOpen(!isOpen)} className="p-2 hover:bg-zinc-100 rounded-lg transition-colors border border-transparent active:border-zinc-200">
-        <MoreHorizontal size={18} className="text-zinc-400" />
-      </button>
-
-      {isOpen && (
-        <div className="absolute right-0 mt-2 w-60 bg-white rounded-xl shadow-xl border border-zinc-100 z-[99] py-1.5 overflow-hidden animate-in fade-in zoom-in duration-100 text-left">
-          {!showStatusOptions ? (
-            <>
-              <button onClick={() => router.push(`/admin/transaksi/${item.id}`)} className="w-full flex items-center gap-3 px-4 py-2.5 text-[13px] text-zinc-600 hover:bg-zinc-50 transition-colors">
-                <Eye size={16} className="text-zinc-400" /> Detail Transaksi
-              </button>
-              <button onClick={(e) => { e.stopPropagation(); setShowStatusOptions(true); }} className="w-full flex items-center justify-between px-4 py-2.5 text-[13px] text-zinc-600 hover:bg-zinc-50 transition-colors">
-                <div className="flex items-center gap-3">
-                  <Edit3 size={16} className="text-zinc-400" /> Ubah Status Pengerjaan
-                </div>
-                <ChevronLeft size={14} className="text-zinc-300 rotate-180" />
-              </button>
-              <div className="h-[1px] bg-zinc-50 my-1" />
-              <button onClick={handleDelete} className="w-full flex items-center gap-3 px-4 py-2.5 text-[13px] text-red-500 hover:bg-red-50 transition-colors font-medium">
-                <Trash2 size={16} /> Hapus
-              </button>
-            </>
-          ) : (
-            <div className="animate-in slide-in-from-right-2 duration-200">
-              <button onClick={(e) => { e.stopPropagation(); setShowStatusOptions(false); }} className="w-full flex items-center gap-2 px-4 py-2 border-b border-zinc-50 text-[11px] font-bold text-zinc-400 uppercase tracking-wider hover:bg-zinc-50">
-                <ChevronLeft size={14} /> Kembali
-              </button>
-              {['Diproses', 'Selesai', 'Dibatalkan'].map((status) => (
-                <button key={status} onClick={() => handleUpdateStatus(status)} className={`w-full text-left px-11 py-2.5 text-[13px] hover:bg-zinc-50 transition-colors ${status === 'Dibatalkan' ? 'text-red-500' : 'text-zinc-600'}`}>
-                  {status}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// --- STAT CARD COMPONENT ---
-export function StatCard({ title, value, sub, trend, icon, isNeutral = false }: any) {
-  return (
-    <div className="bg-white p-5 rounded-xl border border-zinc-100 flex justify-between items-start h-[135px] w-full shadow-sm">
-      <div className="flex flex-col h-full justify-between text-left">
-        <p className="text-[13px] font-bold text-zinc-800 tracking-tight">{title}</p>
-        <div>
-          <div className="flex items-baseline gap-1.5">
-            <span className="text-[26px] font-bold text-zinc-900 leading-none">{value}</span>
-            <span className="text-[11px] text-zinc-400 font-bold">{sub}</span>
-          </div>
-          <p className={`text-[11px] mt-2 flex items-center gap-1 font-bold ${isNeutral ? 'text-zinc-400' : 'text-green-500'}`}>
-            {!isNeutral && <ArrowUpRight size={14} strokeWidth={3} />} {trend}
-          </p>
-        </div>
-      </div>
-      <div className="p-2.5 rounded-lg border border-zinc-50 bg-white flex items-center justify-center text-amber-400 shadow-sm">
-        {icon}
-      </div>
-    </div>
-  );
-}
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -119,47 +21,17 @@ export default function AdminDashboard() {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-
-      // 1. Ambil Semua Data Transaksi untuk Statistik
-      const { data: allTrans, error: transError } = await supabase
-        .from('transaksi')
-        .select('total_bayar, status');
-
-      if (transError) throw transError;
-
-      // 2. Ambil Total Pelanggan
-      const { count: userCount } = await supabase
-        .from('pelanggan')
-        .select('*', { count: 'exact', head: true });
-
-      if (allTrans) {
-        // Kalkulasi Statistik Dinamis
-        const totalIncome = allTrans.reduce((acc, curr) => acc + Number(curr.total_bayar || 0), 0);
-        
-        // Pesanan Aktif (Status yang bukan Selesai atau Dibatalkan/Diambil)
-        const pending = allTrans.filter(t => t.status !== 'Selesai' && t.status !== 'Diambil' && t.status !== 'Dibatalkan').length;
-        
-        // Reparasi Selesai (Hanya yang statusnya Selesai)
-        const completed = allTrans.filter(t => t.status === 'Selesai').length;
-
-        setStats({
-          totalSales: totalIncome,
-          pendingOrders: pending,
-          completedOrders: completed,
-          totalUsers: userCount || 0
-        });
-      }
-
-      // 3. Ambil 5 Data Terbaru untuk Tabel
-      const { data: repairs } = await supabase
-        .from('transaksi')
-        .select('*')
-        .neq('status', 'Diambil')
-        .order('tanggal', { ascending: false })
-        .limit(5);
+      const data = await getDashboardStats();
       
-      if (repairs) setActiveRepairs(repairs);
-
+      if (data) {
+        setStats({
+          totalSales: data.totalIncome,
+          pendingOrders: data.pending,
+          completedOrders: data.completed,
+          totalUsers: data.customerCount
+        });
+        setActiveRepairs(data.latestTransactions);
+      }
     } catch (err) {
       console.error("Dashboard error:", err);
     } finally {
@@ -218,15 +90,14 @@ export default function AdminDashboard() {
 
         {/* CHARTS */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
-          <div className="bg-white p-6 rounded-xl border border-zinc-100 min-h-[400px] flex flex-col text-left shadow-sm">
-            <h3 className="text-[15px] font-bold mb-4">Grafik Penjualan</h3>
-            <div className="flex-1 w-full"><TransactionAreaChart /></div>
+          <div className="bg-white p-6 rounded-2xl border border-zinc-100 shadow-sm" style={{ minHeight: 320 }}>
+            <TransactionAreaChart />
           </div>
-          <div className="bg-white p-6 rounded-xl border border-zinc-100 min-h-[400px] flex flex-col text-left shadow-sm">
-            <h3 className="text-[15px] font-bold mb-4">Stok Bahan Terendah</h3>
-            <div className="flex-1 w-full"><StockBarChart /></div>
+          <div className="bg-white p-6 rounded-2xl border border-zinc-100 shadow-sm" style={{ minHeight: 320 }}>
+            <StockBarChart />
           </div>
         </div>
+
 
         {/* TABLE */}
         <div className="bg-white rounded-xl border border-zinc-100 shadow-sm w-full">
@@ -248,47 +119,47 @@ export default function AdminDashboard() {
                   <th className="py-4 px-6">Status Pembayaran</th>
                   <th className="py-4 px-6">Waktu Masuk</th>
                   <th className="py-4 px-6 text-right">Sisa Tagihan</th>
-                  <th className="py-4 px-6 text-right">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-50">
                 {loading ? (
                   <tr><td colSpan={8} className="py-10 text-center text-zinc-300 text-sm italic">Memuat data...</td></tr>
                 ) : activeRepairs.map((item) => {
-                  const sisaTagihan = Number(item.total_bayar || 0) - Number(item.dp_dibayar || 0);
+                  const sisaTagihan = Number(item.totalAmount || 0) - Number(item.dpAmount || 0);
                   return (
                     <tr key={item.id} className="hover:bg-zinc-50/50 transition-colors">
-                      <td className="py-4 px-6 text-[13px] font-bold text-zinc-800">{item.invoice_code || `#${item.id}`}</td>
-                      <td className="py-4 px-6 text-[13px] font-bold text-zinc-700">{item.nama_pelanggan || "Umum"}</td>
+                      <td className="py-4 px-6 text-[13px] font-bold text-blue-600 hover:underline cursor-pointer" onClick={() => router.push(`/admin/transaksi/${item.id}`)}>
+                        {item.invoiceCode || `#${item.id.slice(0,8)}`}
+                      </td>
+                      <td className="py-4 px-6 text-[13px] font-bold text-zinc-700">{item.customer?.name || item.customerName || "Umum"}</td>
                       <td className="py-4 px-6 text-[13px] text-zinc-600 font-medium">
                         <div className="flex flex-col">
-                          <span>{item.kategori || "—"}</span>
-                          <span className="text-[11px] text-zinc-400">{item.jenis_jasa || "—"}</span>
+                          <span>{item.category || "—"}</span>
+                          <span className="text-[11px] text-zinc-400">{item.serviceName || "—"}</span>
                         </div>
                       </td>
                       <td className="py-4 px-6">
                         <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase border ${
-                          item.status === 'Selesai' ? 'bg-green-50 text-green-600 border-green-100' : 
-                          item.status === 'Dibatalkan' ? 'bg-red-50 text-red-600 border-red-100' : 
+                          item.orderStatus === 'Selesai' ? 'bg-green-50 text-green-600 border-green-100' : 
+                          item.orderStatus === 'Dibatalkan' ? 'bg-red-50 text-red-600 border-red-100' : 
                           'bg-blue-50 text-blue-600 border-blue-100'
                         }`}>
-                          {item.status || 'Proses'}
+                          {item.orderStatus || 'Proses'}
                         </span>
                       </td>
                       <td className="py-4 px-6">
                         <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase border ${
-                          item.status_pembayaran === 'Selesai' ? 'bg-green-50 text-green-600 border-green-100' : 'bg-orange-50 text-orange-600 border-orange-100'
+                          item.paymentStatus === 'Lunas' ? 'bg-green-50 text-green-600 border-green-100' : 
+                          item.paymentStatus === 'DP Bayar' ? 'bg-blue-50 text-blue-600 border-blue-100' : 
+                          'bg-orange-50 text-orange-600 border-orange-100'
                         }`}>
-                          {item.status_pembayaran || 'Pending'}
+                          {item.paymentStatus || 'BELUM BAYAR'}
                         </span>
                       </td>
                       <td className="py-4 px-6 text-[12px] text-zinc-500 font-medium">
-                        {new Date(item.tanggal).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })}
+                        {new Date(item.createdAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })}
                       </td>
                       <td className="py-4 px-6 text-right text-[13px] font-bold text-zinc-900">Rp {sisaTagihan.toLocaleString('id-ID')}</td>
-                      <td className="py-4 px-6 text-right">
-                        <ActionDropdown item={item} onRefresh={fetchDashboardData} />
-                      </td>
                     </tr>
                   );
                 })}

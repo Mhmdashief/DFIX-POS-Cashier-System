@@ -6,7 +6,7 @@ import {
   UserCheck, UserPlus, Trash2, Edit3, 
   MapPin, Phone, User, X, Calendar
 } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { getCustomers, saveCustomerAction, deleteCustomerAction } from "@/app/actions/customer";
 
 // --- KOMPONEN MODAL ---
 const ModalPelanggan = ({ isOpen, onClose, onSave, initialData }: any) => {
@@ -83,8 +83,7 @@ export default function DataPelangganPage() {
   const fetchCustomers = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase.from('pelanggan').select('*').order('created_at', { ascending: false });
-      if (error) throw error;
+      const data = await getCustomers();
       setCustomers(data || []);
     } finally {
       setLoading(false);
@@ -93,14 +92,17 @@ export default function DataPelangganPage() {
 
   const handleSave = async (formData: any) => {
     try {
-      if (editData) {
-        await supabase.from('pelanggan').update(formData).eq('id', editData.id);
-      } else {
-        await supabase.from('pelanggan').insert([formData]);
+      const dataToSave = {
+        name: formData.nama,
+        phone: formData.hp,
+        address: formData.alamat,
+      };
+      const result = await saveCustomerAction(dataToSave, editData?.id);
+      if (result.success) {
+        setIsModalOpen(false);
+        setEditData(null);
+        fetchCustomers();
       }
-      setIsModalOpen(false);
-      setEditData(null);
-      fetchCustomers();
     } catch (error) {
       console.error(error);
     }
@@ -108,8 +110,8 @@ export default function DataPelangganPage() {
 
   const handleDelete = async (id: string) => {
     if (confirm("Apakah anda yakin ingin menghapus data ini?")) {
-      const { error } = await supabase.from('pelanggan').delete().eq('id', id);
-      if (!error) fetchCustomers();
+      const result = await deleteCustomerAction(id);
+      if (result.success) fetchCustomers();
     }
   };
 
@@ -128,7 +130,7 @@ export default function DataPelangganPage() {
     return new Date(dateString).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
   };
 
-  const filtered = customers.filter(c => (c.nama || "").toLowerCase().includes(searchQuery.toLowerCase()));
+  const filtered = customers.filter(c => (c.name || "").toLowerCase().includes(searchQuery.toLowerCase()));
 
   return (
     <div className="min-h-screen bg-[#FDFDFD] p-4 md:p-8 w-full font-['Plus_Jakarta_Sans',sans-serif]">
@@ -167,7 +169,7 @@ export default function DataPelangganPage() {
           <div className="flex flex-col h-full justify-between">
             <p className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest">Pelanggan Aktif</p>
             <div className="flex items-baseline gap-1.5">
-              <span className="text-[32px] font-bold text-[#161616] leading-none">{customers.filter(c => (c.total_order || 0) > 0).length}</span>
+              <span className="text-[32px] font-bold text-[#161616] leading-none">{customers.length}</span>
               <span className="text-[12px] text-zinc-400 font-bold">/ Orang</span>
             </div>
             <p className="text-[11px] font-bold text-[#34C759]">Status Stabil</p>
@@ -183,12 +185,6 @@ export default function DataPelangganPage() {
           <p className="text-sm text-zinc-400 font-medium">Mengatur Seluruh Data Pelanggan</p>
         </div>
         <div className="flex gap-3 w-full md:w-auto">
-          <button 
-            onClick={() => { setEditData(null); setIsModalOpen(true); }} 
-            className="flex items-center gap-2 px-5 py-2.5 border border-zinc-200 rounded-xl text-sm font-bold text-zinc-600 hover:bg-zinc-50 shadow-sm transition-all text-nowrap"
-          >
-            <Plus size={18} className="text-orange-400" /> Tambah Pelanggan
-          </button>
           <div className="relative flex-1 md:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
             <input placeholder="Search" className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-zinc-200 outline-none text-sm focus:border-zinc-400 shadow-sm" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
@@ -197,7 +193,9 @@ export default function DataPelangganPage() {
       </div>
 
       {/* TABLE */}
-      <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm overflow-visible">
+      <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm relative z-20 overflow-visible">
+
+
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="text-zinc-400 text-[11px] font-bold border-b border-zinc-50 uppercase tracking-widest">
@@ -214,22 +212,27 @@ export default function DataPelangganPage() {
             {filtered.map((c, i) => (
               <tr key={c.id} className="hover:bg-zinc-50/50 transition-colors">
                 <td className="py-4 px-6 text-sm text-zinc-500 font-medium">{i < 9 ? `0${i+1}` : i+1}</td>
-                <td className="py-4 px-6 text-sm font-bold text-zinc-800">{c.nama}</td>
-                <td className="py-4 px-6 text-sm text-zinc-600">{c.hp || c.telepon || "-"}</td>
-                <td className="py-4 px-6 text-sm text-zinc-500 truncate max-w-[150px]">{c.alamat || "-"}</td>
-                <td className="py-4 px-6 text-sm font-bold text-[#161616]">{c.total_order || 0}</td>
+                <td className="py-4 px-6 text-sm font-bold text-zinc-800">{c.name}</td>
+                <td className="py-4 px-6 text-sm text-zinc-600">{c.phone || "-"}</td>
+                <td className="py-4 px-6 text-sm text-zinc-500 truncate max-w-[150px]">{c.address || "-"}</td>
+                <td className="py-4 px-6 text-sm font-bold text-[#161616]">0</td>
                 <td className="py-4 px-6 text-sm text-zinc-600 flex items-center gap-2">
-                  <Calendar size={14} className="text-orange-400" /> {formatDate(c.terakhir_belanja)}
+                  <Calendar size={14} className="text-orange-400" /> {formatDate(c.createdAt)}
                 </td>
                 <td className="py-4 px-6 text-right relative">
                   <button onClick={() => setActiveMenu(activeMenu === c.id ? null : c.id)} className="p-2 hover:bg-zinc-100 rounded-lg transition-colors"><MoreHorizontal size={20} className="text-zinc-400" /></button>
                   
                   {activeMenu === c.id && (
-                    <div ref={dropdownRef} className="absolute right-6 top-10 w-36 bg-white border border-zinc-100 rounded-xl z-[60] shadow-xl py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
-                      <button onClick={() => { setEditData(c); setIsModalOpen(true); setActiveMenu(null); }} className="w-full px-4 py-2 text-left text-xs font-bold text-zinc-600 hover:bg-zinc-50 border-b border-zinc-50">Edit Pelanggan</button>
-                      <button onClick={() => handleDelete(c.id)} className="w-full px-4 py-2 text-left text-xs font-bold text-red-500 hover:bg-red-50">Hapus</button>
+                    <div ref={dropdownRef} className="absolute right-6 top-12 w-44 bg-white border border-zinc-100 rounded-xl z-[100] shadow-xl py-1 animate-in fade-in zoom-in-95 duration-150">
+                      <button onClick={() => { setEditData(c); setIsModalOpen(true); setActiveMenu(null); }} className="w-full px-4 py-2.5 text-left text-[13px] font-bold text-zinc-700 hover:bg-zinc-50 border-b border-zinc-50 flex items-center gap-2">
+                        <Edit3 size={14} className="text-zinc-400" /> Edit Pelanggan
+                      </button>
+                      <button onClick={() => handleDelete(c.id)} className="w-full px-4 py-2.5 text-left text-[13px] font-bold text-red-500 hover:bg-red-50 flex items-center gap-2">
+                        <Trash2 size={14} className="text-red-400" /> Hapus
+                      </button>
                     </div>
                   )}
+
                 </td>
               </tr>
             ))}
