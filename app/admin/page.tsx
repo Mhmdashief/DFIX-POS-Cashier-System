@@ -1,12 +1,11 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { 
-  Receipt, Clock, CheckCircle2, MoreHorizontal, 
-  ArrowUpRight, Users, RefreshCw, Eye, Edit3, Trash2, ChevronLeft 
+import { useEffect, useState } from "react";
+import {
+  Receipt, Clock, CheckCircle2, Users, RefreshCw
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { getDashboardStats, updateTransactionStatusAction, deleteTransactionAction, updatePaymentStatusAction } from "@/app/actions/transaction";
+import { getDashboardStats } from "@/app/actions/transaction";
 import { TransactionAreaChart, StockBarChart } from "@/components/DashboardCharts";
 import { StatCard } from "@/components/StatCard";
 
@@ -22,7 +21,7 @@ export default function AdminDashboard() {
     try {
       setLoading(true);
       const data = await getDashboardStats();
-      
+
       if (data) {
         setStats({
           totalSales: data.totalIncome,
@@ -57,34 +56,34 @@ export default function AdminDashboard() {
 
         {/* STATS DINAMIS */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
-          <StatCard 
-            title="Total Pendapatan" 
-            value={stats.totalSales >= 1000000 ? `Rp ${(stats.totalSales/1000000).toFixed(1)}jt` : `Rp ${stats.totalSales.toLocaleString('id-ID')}`} 
-            sub="/ Akumulasi" 
-            trend="Pendapatan kotor" 
-            icon={<Receipt size={18} />} 
+          <StatCard
+            title="Total Pendapatan"
+            value={stats.totalSales >= 1000000 ? `Rp ${(stats.totalSales / 1000000).toFixed(1)}jt` : `Rp ${stats.totalSales.toLocaleString('id-ID')}`}
+            sub="/ Akumulasi"
+            trend="Pendapatan kotor"
+            icon={<Receipt size={18} />}
           />
-          <StatCard 
-            title="Pesanan Aktif" 
-            value={stats.pendingOrders} 
-            sub="/ Unit" 
-            trend="Sedang dikerjakan" 
-            isNeutral 
-            icon={<Clock size={18} />} 
+          <StatCard
+            title="Pesanan Aktif"
+            value={stats.pendingOrders}
+            sub="/ Unit"
+            trend="Sedang dikerjakan"
+            isNeutral
+            icon={<Clock size={18} />}
           />
-          <StatCard 
-            title="Reparasi Selesai" 
-            value={stats.completedOrders} 
-            sub="/ Unit" 
-            trend="Siap diambil" 
-            icon={<CheckCircle2 size={18} />} 
+          <StatCard
+            title="Reparasi Selesai"
+            value={stats.completedOrders}
+            sub="/ Unit"
+            trend="Siap diambil"
+            icon={<CheckCircle2 size={18} />}
           />
-          <StatCard 
-            title="Total Pelanggan" 
-            value={stats.totalUsers} 
-            sub="/ Orang" 
-            trend="Database member" 
-            icon={<Users size={18} />} 
+          <StatCard
+            title="Total Pelanggan"
+            value={stats.totalUsers}
+            sub="/ Orang"
+            trend="Database member"
+            icon={<Users size={18} />}
           />
         </div>
 
@@ -128,8 +127,8 @@ export default function AdminDashboard() {
                   const sisaTagihan = Number(item.totalAmount || 0) - Number(item.dpAmount || 0);
                   return (
                     <tr key={item.id} className="hover:bg-zinc-50/50 transition-colors">
-                      <td className="py-4 px-6 text-[13px] font-bold text-blue-600 hover:underline cursor-pointer" onClick={() => router.push(`/admin/transaksi/${item.id}`)}>
-                        {item.invoiceCode || `#${item.id.slice(0,8)}`}
+                      <td className="py-4 px-6 text-[13px] font-bold text-zinc-700 font-mono">
+                        {item.invoiceCode || `#${item.id.slice(0, 8)}`}
                       </td>
                       <td className="py-4 px-6 text-[13px] font-bold text-zinc-700">{item.customer?.name || item.customerName || "Umum"}</td>
                       <td className="py-4 px-6 text-[13px] text-zinc-600 font-medium">
@@ -139,20 +138,18 @@ export default function AdminDashboard() {
                         </div>
                       </td>
                       <td className="py-4 px-6">
-                        <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase border ${
-                          item.orderStatus === 'Selesai' ? 'bg-green-50 text-green-600 border-green-100' : 
-                          item.orderStatus === 'Dibatalkan' ? 'bg-red-50 text-red-600 border-red-100' : 
-                          'bg-blue-50 text-blue-600 border-blue-100'
-                        }`}>
+                        <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase border ${item.orderStatus === 'Selesai' ? 'bg-green-50 text-green-600 border-green-100' :
+                          item.orderStatus === 'Dibatalkan' ? 'bg-red-50 text-red-600 border-red-100' :
+                            'bg-blue-50 text-blue-600 border-blue-100'
+                          }`}>
                           {item.orderStatus || 'Proses'}
                         </span>
                       </td>
                       <td className="py-4 px-6">
-                        <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase border ${
-                          item.paymentStatus === 'Lunas' ? 'bg-green-50 text-green-600 border-green-100' : 
-                          item.paymentStatus === 'DP Bayar' ? 'bg-blue-50 text-blue-600 border-blue-100' : 
-                          'bg-orange-50 text-orange-600 border-orange-100'
-                        }`}>
+                        <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase border ${item.paymentStatus === 'Lunas' ? 'bg-green-50 text-green-600 border-green-100' :
+                          item.paymentStatus === 'DP Bayar' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                            'bg-orange-50 text-orange-600 border-orange-100'
+                          }`}>
                           {item.paymentStatus || 'BELUM BAYAR'}
                         </span>
                       </td>

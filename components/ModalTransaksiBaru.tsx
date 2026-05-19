@@ -69,7 +69,7 @@ export default function ModalTransaksiBaru({ isOpen, onClose, onRefresh }: any) 
   const [allMaterials, setAllMaterials] = useState<any[]>([]);
   const [services, setServices] = useState<any[]>([]);
 
-  
+
   // Form State
   const [customerId, setCustomerId] = useState("");
   const [customerName, setCustomerName] = useState("");
@@ -79,6 +79,7 @@ export default function ModalTransaksiBaru({ isOpen, onClose, onRefresh }: any) 
   const [estimasiHarga, setEstimasiHarga] = useState("");
   const [dpDibayar, setDpDibayar] = useState("");
   const [metodeBayar, setMetodeBayar] = useState("");
+  const [tipeBayar, setTipeBayar] = useState<"DP" | "LUNAS">("DP");
 
   // Materials State
   const [usedMaterials, setUsedMaterials] = useState<any[]>([]);
@@ -109,6 +110,8 @@ export default function ModalTransaksiBaru({ isOpen, onClose, onRefresh }: any) 
       document.body.style.overflow = 'unset';
       setStep("INFO");
       setUsedMaterials([]);
+      setTipeBayar("DP");
+      setDpDibayar("");
     }
   }, [isOpen]);
 
@@ -145,8 +148,8 @@ export default function ModalTransaksiBaru({ isOpen, onClose, onRefresh }: any) 
     setIsPending(true);
     try {
       const totalAmt = parseInt(estimasiHarga) || 0;
-      const dpAmt = parseInt(dpDibayar) || 0;
-      const payStatus = dpAmt >= totalAmt && totalAmt > 0 ? "LUNAS" : "DP_BAYAR";
+      const dpAmt = tipeBayar === "LUNAS" ? totalAmt : (parseInt(dpDibayar) || 0);
+      const payStatus = tipeBayar === "LUNAS" ? "LUNAS" : "DP_BAYAR";
 
       // Only include valid Transaction schema fields
       const payload: any = {
@@ -195,10 +198,10 @@ export default function ModalTransaksiBaru({ isOpen, onClose, onRefresh }: any) 
 
   const categories = Array.from(new Set(allMaterials.map(m => m.category)));
   const materialsByCategory = allMaterials.filter(m => m.category === currentMaterial.category);
-  
+
   // Get unique names for the selected category
   const materialNames = Array.from(new Set(materialsByCategory.map(m => m.name)));
-  
+
   // Get variants for the selected material name
   const variantsByMaterial = materialsByCategory.filter(m => m.name === currentMaterial.name).map(m => m.variant).filter(Boolean);
 
@@ -206,7 +209,7 @@ export default function ModalTransaksiBaru({ isOpen, onClose, onRefresh }: any) 
   const activeServices = services.filter(s => s.status === "Aktif");
   const opsiJasa = activeServices.map(s => s.name);
   const selectedService = activeServices.find(s => s.name === jenisJasa);
-  const opsiKategori = selectedService 
+  const opsiKategori = selectedService
     ? (selectedService.category?.split(',').map((c: string) => c.trim()) || [])
     : [];
 
@@ -216,7 +219,7 @@ export default function ModalTransaksiBaru({ isOpen, onClose, onRefresh }: any) 
       <div className="fixed inset-0 w-screen h-screen bg-black/60 backdrop-blur-[2px]" onClick={onClose}></div>
 
       <div className="relative bg-white rounded-[1.8rem] w-full max-w-[420px] mx-4 shadow-2xl font-sans overflow-hidden">
-        
+
         {/* Header */}
         <div className="p-6 pb-4 flex justify-between items-start border-b border-zinc-50">
           <div>
@@ -240,22 +243,77 @@ export default function ModalTransaksiBaru({ isOpen, onClose, onRefresh }: any) 
                 <label className="text-[11px] font-bold text-zinc-500 ml-0.5 uppercase tracking-wider">Catatan Customer</label>
                 <input placeholder="Tulis kebutuhan customer" value={catatan} onChange={(e) => setCatatan(e.target.value)} className="w-full px-4 py-2.5 border border-zinc-200 rounded-xl text-sm outline-none focus:border-orange-400 placeholder:text-zinc-300" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-zinc-500 ml-0.5 uppercase tracking-wider">Estimasi Harga</label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-400 font-bold text-[10px]">RP</span>
-                    <input type="number" placeholder="0" value={estimasiHarga} onChange={(e) => setEstimasiHarga(e.target.value)} className="w-full pl-8 pr-3 py-2.5 border border-zinc-200 rounded-xl text-sm outline-none focus:border-orange-400 font-semibold" />
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-zinc-500 ml-0.5 uppercase tracking-wider">DP Dibayar</label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-400 font-bold text-[10px]">RP</span>
-                    <input type="number" placeholder="0" value={dpDibayar} onChange={(e) => setDpDibayar(e.target.value)} className="w-full pl-8 pr-3 py-2.5 border border-zinc-200 rounded-xl text-sm outline-none focus:border-orange-400 font-semibold" />
-                  </div>
+              {/* ESTIMASI HARGA */}
+              <div className="space-y-1">
+                <label className="text-[11px] font-bold text-zinc-500 ml-0.5 uppercase tracking-wider">Estimasi Harga</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-400 font-bold text-[10px]">RP</span>
+                  <input type="number" placeholder="0" value={estimasiHarga} onChange={(e) => setEstimasiHarga(e.target.value)} className="w-full pl-8 pr-3 py-2.5 border border-zinc-200 rounded-xl text-sm outline-none focus:border-orange-400 font-semibold" />
                 </div>
               </div>
+
+              {/* TIPE PEMBAYARAN TOGGLE */}
+              <div className="space-y-2">
+                <label className="text-[11px] font-bold text-zinc-500 ml-0.5 uppercase tracking-wider">Tipe Pembayaran</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { setTipeBayar("DP"); setDpDibayar(""); }}
+                    className={`py-2.5 rounded-xl text-[12px] font-bold border-2 transition-all ${tipeBayar === "DP"
+                      ? "bg-[#2D4E53] border-[#2D4E53] text-white shadow-md shadow-[#2D4E53]/20"
+                      : "bg-white border-zinc-200 text-zinc-500 hover:border-zinc-300"
+                      }`}
+                  >
+                    Bayar DP
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setTipeBayar("LUNAS"); setDpDibayar(""); }}
+                    className={`py-2.5 rounded-xl text-[12px] font-bold border-2 transition-all ${tipeBayar === "LUNAS"
+                      ? "bg-emerald-600 border-emerald-600 text-white shadow-md shadow-emerald-600/20"
+                      : "bg-white border-zinc-200 text-zinc-500 hover:border-zinc-300"
+                      }`}
+                  >
+                    Lunas Sekarang
+                  </button>
+                </div>
+              </div>
+
+              {/* NOMINAL DP — hanya muncul saat tipe DP */}
+              {tipeBayar === "DP" && (
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-zinc-500 ml-0.5 uppercase tracking-wider">Nominal DP Dibayar</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-400 font-bold text-[10px]">RP</span>
+                    <input
+                      type="number"
+                      placeholder="0"
+                      value={dpDibayar}
+                      onChange={(e) => setDpDibayar(e.target.value)}
+                      className="w-full pl-8 pr-3 py-2.5 border border-zinc-200 rounded-xl text-sm outline-none focus:border-orange-400 font-semibold"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* LIVE PREVIEW TAGIHAN */}
+              {estimasiHarga && parseInt(estimasiHarga) > 0 && (
+                <div className={`p-3 rounded-xl border text-[12px] font-bold ${tipeBayar === "LUNAS"
+                  ? "bg-emerald-50 border-emerald-100 text-emerald-700"
+                  : "bg-blue-50 border-blue-100 text-blue-700"
+                  }`}>
+                  {tipeBayar === "LUNAS" ? (
+                    <span>✅ Transaksi akan dicatat sebagai <span className="font-black">LUNAS</span> — Rp {parseInt(estimasiHarga).toLocaleString("id-ID")}</span>
+                  ) : (
+                    <span>
+                      DP: <span className="font-black">Rp {(parseInt(dpDibayar) || 0).toLocaleString("id-ID")}</span>
+                      {" · "}
+                      Sisa: <span className="font-black text-red-500">Rp {Math.max(0, parseInt(estimasiHarga) - (parseInt(dpDibayar) || 0)).toLocaleString("id-ID")}</span>
+                    </span>
+                  )}
+                </div>
+              )}
+
               <CustomDropdown label="Pilih Metode Pembayaran" value={metodeBayar} options={opsiMetode} placeholder="Pilih Metode Pembayarannya" icon={CreditCard} onChange={setMetodeBayar} />
             </div>
           )}
@@ -310,30 +368,30 @@ export default function ModalTransaksiBaru({ isOpen, onClose, onRefresh }: any) 
                 setCurrentMaterial({ ...currentMaterial, name: val, variant: "", maxStock: mat?.stock || 0, id: mat?.id || "" });
               }} />
               <CustomDropdown label="Pilih Varian" value={currentMaterial.variant} options={variantsByMaterial} placeholder="Pilih Varian" icon={Wrench} onChange={(val: string) => {
-                 const mat = materialsByCategory.find(m => m.name === currentMaterial.name && m.variant === val);
-                 setCurrentMaterial({ ...currentMaterial, variant: val, maxStock: mat?.stock || currentMaterial.maxStock, id: mat?.id || currentMaterial.id });
+                const mat = materialsByCategory.find(m => m.name === currentMaterial.name && m.variant === val);
+                setCurrentMaterial({ ...currentMaterial, variant: val, maxStock: mat?.stock || currentMaterial.maxStock, id: mat?.id || currentMaterial.id });
               }} />
-              
+
               <div className="space-y-1">
                 <label className="text-[11px] font-bold text-zinc-500 ml-0.5 uppercase tracking-wider">Jumlah Bahan Transaksi</label>
                 <div className="flex items-center gap-3">
                   <div className="flex items-center border border-zinc-200 rounded-xl overflow-hidden bg-white">
-                    <button 
-                      type="button" 
-                      onClick={() => setCurrentMaterial({ ...currentMaterial, qty: Math.max(1, currentMaterial.qty - 1) })} 
+                    <button
+                      type="button"
+                      onClick={() => setCurrentMaterial({ ...currentMaterial, qty: Math.max(1, currentMaterial.qty - 1) })}
                       className="px-4 py-2 hover:bg-zinc-50 border-r border-zinc-200 transition-colors"
                     >
                       <Minus size={14} className="text-zinc-600" />
                     </button>
-                    <input 
-                      type="number" 
-                      value={currentMaterial.qty} 
-                      readOnly 
-                      className="w-14 text-center text-sm font-black text-[#2D4E53] outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none bg-white" 
+                    <input
+                      type="number"
+                      value={currentMaterial.qty}
+                      readOnly
+                      className="w-14 text-center text-sm font-black text-[#2D4E53] outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none bg-white"
                     />
-                    <button 
-                      type="button" 
-                      onClick={() => setCurrentMaterial({ ...currentMaterial, qty: Math.min(currentMaterial.maxStock, currentMaterial.qty + 1) })} 
+                    <button
+                      type="button"
+                      onClick={() => setCurrentMaterial({ ...currentMaterial, qty: Math.min(currentMaterial.maxStock, currentMaterial.qty + 1) })}
                       disabled={currentMaterial.qty >= currentMaterial.maxStock}
                       className="px-4 py-2 hover:bg-zinc-50 border-l border-zinc-200 transition-colors disabled:opacity-30 disabled:bg-zinc-50"
                     >
@@ -355,9 +413,9 @@ export default function ModalTransaksiBaru({ isOpen, onClose, onRefresh }: any) 
                 </div>
               </div>
 
-              <button 
-                type="button" 
-                onClick={handleAddMaterial} 
+              <button
+                type="button"
+                onClick={handleAddMaterial}
                 disabled={!currentMaterial.name || currentMaterial.qty > currentMaterial.maxStock || currentMaterial.maxStock === 0}
                 className="w-full py-3.5 bg-[#2D4E53] text-white rounded-xl text-[13px] font-bold shadow-lg shadow-[#2D4E53]/20 hover:bg-[#233d40] transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
               >

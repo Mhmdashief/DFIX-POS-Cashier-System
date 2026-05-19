@@ -150,6 +150,7 @@ export default function RiwayatTransaksiPage() {
                 <th className="py-6 px-8">Layanan</th>
                 <th className="py-6 px-8 text-center">Status Pengerjaan</th>
                 <th className="py-6 px-8 text-center">Pembayaran</th>
+                <th className="py-6 px-8 text-right">Sisa Tagihan</th>
                 <th className="py-6 px-8">Tanggal</th>
                 <th className="py-6 px-8 text-right">Aksi</th>
               </tr>
@@ -157,7 +158,7 @@ export default function RiwayatTransaksiPage() {
             <tbody className="divide-y divide-zinc-50">
               {loading ? (
                  <tr>
-                    <td colSpan={7} className="py-32 text-center">
+                    <td colSpan={8} className="py-32 text-center">
                         <div className="flex flex-col items-center gap-3">
                             <Loader2 className="animate-spin text-[#2D4F53]" size={32} />
                             <p className="text-zinc-400 font-black text-[11px] tracking-widest uppercase">Memuat Database...</p>
@@ -165,7 +166,7 @@ export default function RiwayatTransaksiPage() {
                     </td>
                  </tr>
               ) : filteredData.length > 0 ? (
-                filteredData.map((item) => (
+              filteredData.map((item) => (
                 <tr key={item.id} className="hover:bg-zinc-50/50 transition-colors group">
                   <td className="py-7 px-8 font-bold text-[#2D4F53] text-[13px] font-mono tracking-tight">
                     {item.invoiceCode || `TRX-${item.id.slice(0, 8)}`}
@@ -189,7 +190,11 @@ export default function RiwayatTransaksiPage() {
                           ${item.paymentStatus === 'LUNAS' ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-500'}`}>
                           {item.paymentStatus === 'LUNAS' ? 'LUNAS' : 'DP BAYAR'}
                       </span>
-
+                  </td>
+                  <td className={`py-7 px-8 text-right font-black text-[13px] ${
+                    (Number(item.totalAmount || 0) - Number(item.dpAmount || 0)) > 0 ? "text-red-500" : "text-emerald-600"
+                  }`}>
+                    Rp {(Number(item.totalAmount || 0) - Number(item.dpAmount || 0)).toLocaleString("id-ID")}
                   </td>
                   <td className="py-7 px-8 text-zinc-500 font-bold text-[12px]">{new Date(item.createdAt).toLocaleDateString('id-ID') || "-"}</td>
                   <td className="py-7 px-8 text-right relative">
@@ -202,14 +207,31 @@ export default function RiwayatTransaksiPage() {
                      {activeMenu === item.id && (
                        <div className="absolute right-6 top-14 w-52 bg-white border border-zinc-100 rounded-2xl z-[100] py-2 shadow-2xl animate-in fade-in zoom-in duration-200">
                           <button 
-                            onClick={() => router.push(`/admin/transaksi/${item.id}`)}
+                            onClick={() => router.push(`/kasir/transaksi/${item.id}`)}
                             className="w-full px-5 py-3 text-left text-[13px] font-bold text-zinc-700 hover:bg-zinc-50 transition-colors"
                           >
                             Buka Detail
                           </button>
-                          
 
-                          <div className="border-b border-zinc-50">
+                          {/* UBAH STATUS */}
+                          <div className="border-t border-zinc-50">
+                            <button
+                              onClick={() => { setShowStatusOptions(!showStatusOptions); setShowPaymentOptions(false); }}
+                              className="w-full px-5 py-3 text-left text-[13px] font-bold text-zinc-700 hover:bg-zinc-50 flex justify-between items-center"
+                            >
+                              Ubah Status <ChevronDown size={14} className={showStatusOptions ? 'rotate-180' : ''} />
+                            </button>
+                            {showStatusOptions && (
+                              <div className="bg-zinc-50 py-1 border-t border-zinc-100">
+                                {['Diproses', 'Selesai', 'Dibatalkan'].map(s => (
+                                  <button key={s} onClick={() => updateStatus(item.id, s)} className="w-full px-8 py-2 text-left text-[11px] font-black text-zinc-400 hover:text-[#2D4F53] uppercase transition-colors">{s}</button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* UBAH PEMBAYARAN */}
+                          <div className="border-t border-zinc-50">
                               <button 
                                 onClick={() => { setShowPaymentOptions(!showPaymentOptions); setShowStatusOptions(false); }}
                                 className="w-full px-5 py-3 text-left text-[13px] font-bold text-zinc-700 hover:bg-zinc-50 flex justify-between items-center"
@@ -217,21 +239,20 @@ export default function RiwayatTransaksiPage() {
                                 Ubah Pembayaran <ChevronDown size={14} className={showPaymentOptions ? 'rotate-180' : ''} />
                               </button>
                               {showPaymentOptions && (
-                                  <div className="bg-zinc-50 py-1 border-t border-zinc-50">
+                                  <div className="bg-zinc-50 py-1 border-t border-zinc-100">
                                   {[
                                     { id: 'LUNAS', label: 'LUNAS' },
                                     { id: 'DP_BAYAR', label: 'DP BAYAR' }
                                   ].map(s => (
-                                      <button key={s.id} onClick={() => updatePaymentStatus(item.id, s.id)} className="w-full px-8 py-2 text-left text-[11px] font-black text-zinc-400 hover:text-[#2D4F53] uppercase">{s.label}</button>
+                                      <button key={s.id} onClick={() => updatePaymentStatus(item.id, s.id)} className="w-full px-8 py-2 text-left text-[11px] font-black text-zinc-400 hover:text-[#2D4F53] uppercase transition-colors">{s.label}</button>
                                   ))}
-
-
                                   </div>
                               )}
                           </div>
+
                           <button 
                             onClick={() => deleteTransaction(item.id)}
-                            className="w-full px-5 py-3 text-left text-[13px] font-bold text-red-500 hover:bg-red-50 transition-colors"
+                            className="w-full px-5 py-3 text-left text-[13px] font-bold text-red-500 hover:bg-red-50 transition-colors border-t border-zinc-50"
                           >
                             Hapus Transaksi
                           </button>
@@ -242,7 +263,7 @@ export default function RiwayatTransaksiPage() {
               ))
               ) : (
                 <tr>
-                    <td colSpan={7} className="py-32 text-center">
+                    <td colSpan={8} className="py-32 text-center">
                         <p className="text-zinc-400 font-bold text-sm tracking-tight">Tidak ada transaksi yang ditemukan.</p>
                     </td>
                 </tr>

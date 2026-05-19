@@ -90,10 +90,8 @@ export function TransactionAreaChart() {
             <p className="text-[11px] text-zinc-400 font-medium">Grafik pendapatan 7 hari terakhir</p>
           </div>
         </div>
-        <div className="px-3 py-1.5 bg-indigo-50/50 border border-indigo-100 rounded-full">
-            <span className="text-[10px] font-black text-indigo-600 uppercase tracking-wider">Live Monitoring</span>
-        </div>
       </div>
+
 
       {!loading && data.length > 0 && (
         <div className="mb-6">
@@ -192,14 +190,14 @@ export function StockBarChart() {
         </div>
       </div>
 
-      <div className="flex items-center gap-3 mb-6">
-        <div className="flex-1 flex flex-col p-3 bg-rose-50 rounded-2xl border border-rose-100">
-          <span className="text-[10px] font-black text-rose-500 uppercase tracking-widest mb-1">Habis</span>
-          <span className="text-[18px] font-black text-rose-600 leading-none">{habisCount} <small className="text-[10px]">Item</small></span>
+      <div className="flex items-center gap-2 mb-4">
+        <div className="flex items-center gap-2.5 px-3 py-1.5 bg-rose-50 rounded-lg border border-rose-100">
+          <div className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+          <span className="text-[11px] font-bold text-rose-600">Habis: <span className="font-black ml-1">{habisCount}</span></span>
         </div>
-        <div className="flex-1 flex flex-col p-3 bg-amber-50 rounded-2xl border border-amber-100">
-          <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest mb-1">Menipis</span>
-          <span className="text-[18px] font-black text-amber-600 leading-none">{menipisCount} <small className="text-[10px]">Item</small></span>
+        <div className="flex items-center gap-2.5 px-3 py-1.5 bg-amber-50 rounded-lg border border-amber-100">
+          <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+          <span className="text-[11px] font-bold text-amber-600">Menipis: <span className="font-black ml-1">{menipisCount}</span></span>
         </div>
       </div>
 

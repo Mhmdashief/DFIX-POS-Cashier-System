@@ -132,9 +132,18 @@ export async function updatePaymentStatusAction(id: string, status: string, paym
       if (current) {
         data.dpAmount = current.totalAmount;
       }
-      if (paymentMethod) {
-        data.paymentMethod = paymentMethod;
+    } else if (status === "DP_BAYAR") {
+      // Jika balik ke DP, kita asumsikan belum ada DP yang valid atau 
+      // biarkan user mengisi ulang lewat detail jika nanti diperlukan.
+      // Untuk sekarang, pastikan dpAmount tidak sama dengan totalAmount.
+      const current = await prisma.transaction.findUnique({ where: { id } });
+      if (current && current.dpAmount === current.totalAmount) {
+        data.dpAmount = 0; // Reset ke 0 agar sisa tagihan muncul lagi
       }
+    }
+
+    if (paymentMethod) {
+      data.paymentMethod = paymentMethod;
     }
 
     await prisma.transaction.update({ where: { id }, data });

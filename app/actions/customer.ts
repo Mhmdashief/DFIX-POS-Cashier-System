@@ -7,6 +7,13 @@ export async function getCustomers() {
   try {
     return await prisma.customer.findMany({
       orderBy: { createdAt: "desc" },
+      include: {
+        transactions: {
+          where: { isDeleted: false },
+          orderBy: { createdAt: "desc" },
+          select: { createdAt: true, id: true },
+        },
+      },
     });
   } catch (error) {
     console.error("Failed to fetch customers:", error);
@@ -27,6 +34,7 @@ export async function saveCustomerAction(data: any, id?: string) {
       });
     }
     revalidatePath("/admin/data-pelanggan");
+    revalidatePath("/kasir/data-pelanggan");
     return { success: true };
   } catch (error: any) {
     console.error("Failed to save customer:", error);
@@ -38,6 +46,7 @@ export async function deleteCustomerAction(id: string) {
   try {
     await prisma.customer.delete({ where: { id } });
     revalidatePath("/admin/data-pelanggan");
+    revalidatePath("/kasir/data-pelanggan");
     return { success: true };
   } catch (error: any) {
     console.error("Failed to delete customer:", error);
