@@ -88,7 +88,6 @@ export default function Sidebar({ role }: { role: 'admin' | 'kasir' }) {
     { name: "Dashboard", href: "/kasir", icon: LayoutDashboard },
     { name: "Transaksi Reparasi", href: "/kasir/transaksi", icon: Receipt },
     { name: "Data Pelanggan", href: "/kasir/data-pelanggan", icon: Users },
-    { name: "Riwayat Transaksi", href: "/kasir/riwayat-transaksi", icon: FileText },
   ];
 
   const menu = role === 'admin' ? adminMenu : kasirMenu;

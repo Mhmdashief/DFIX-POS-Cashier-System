@@ -19,10 +19,32 @@ export async function getTransactions(includeDeleted = false) {
 
 export async function getTransactionById(id: string) {
   try {
-    return await prisma.transaction.findUnique({
+    const transaction = await prisma.transaction.findUnique({
       where: { id },
       include: { customer: true },
     });
+
+    if (!transaction) return null;
+
+    const invoiceCode = transaction.invoiceCode || `TRX-${transaction.id.slice(0, 8)}`;
+    const history = await prisma.materialHistory.findMany({
+      where: {
+        ref: invoiceCode,
+        type: "Keluar",
+      },
+    });
+
+    const materials = history.map(h => ({
+      name: h.bahan,
+      variant: h.varian,
+      category: h.kategori,
+      qty: h.qty,
+    }));
+
+    return {
+      ...transaction,
+      materials,
+    };
   } catch (error) {
     console.error("Failed to fetch transaction detail:", error);
     return null;

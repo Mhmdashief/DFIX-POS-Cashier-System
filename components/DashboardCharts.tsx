@@ -161,7 +161,7 @@ export function StockBarChart() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const chartData = await getStockChartData("all");
+        const chartData = await getStockChartData("critical");
         setData(chartData || []);
       } catch (err) {
         console.error(err);
@@ -222,7 +222,7 @@ export function StockBarChart() {
               />
               <YAxis hide />
               <Tooltip content={<CustomBarTooltip />} cursor={{ fill: "#f8fafc", radius: 12 }} />
-              <Bar dataKey="value" radius={[10, 10, 10, 10]}>
+              <Bar dataKey="value" radius={[10, 10, 10, 10]} minPointSize={15}>
                 {data.map((entry, index) => {
                     const color = entry.value === 0 ? "#f43f5e" : entry.value < 5 ? "#fbbf24" : "#10b981";
                     return (

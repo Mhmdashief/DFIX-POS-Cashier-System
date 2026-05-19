@@ -12,7 +12,6 @@ interface HeaderProps {
 const routeConfig: Record<string, { title: string; desc: string }> = {
   "/kasir/dashboard": { title: "Dashboard Kasir", desc: "Pantau ringkasan transaksi dan aktivitas toko hari ini." },
   "/kasir/transaksi-reparasi": { title: "Transaksi Reparasi", desc: "Monitoring seluruh transaksi reparasi pelanggan." },
-  "/kasir/riwayat-transaksi": { title: "Riwayat Transaksi", desc: "Lihat laporan lengkap transaksi yang telah selesai." },
   "/kasir/data-pelanggan": { title: "Data Pelanggan", desc: "Kelola informasi dan daftar pelanggan." },
   "/admin/manajemen-pengguna": { title: "Manajemen Pengguna", desc: "Atur akun pegawai dan hak akses sistem." },
   "/admin/data-jasa": { title: "Data Jasa Reparasi", desc: "Kelola daftar jenis layanan reparasi." },

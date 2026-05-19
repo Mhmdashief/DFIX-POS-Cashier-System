@@ -33,14 +33,14 @@ export default function LoginPage() {
       // Berhasil Login - NextAuth akan menangani session
       // Kita bisa cek session di client atau redirect saja
       // Karena kita pakai redirect: false, kita harus manual push
-      
+
       // Ambil role bisa via session, tapi untuk simpelnya kita redirect ke dashboard masing-masing
       // Biasanya admin punya rute berbeda. Untuk sementara kita arahkan ke /admin atau /kasir
       // berdasarkan respon atau biarkan middleware menangani.
       // Namun karena kita butuh role, kita panggil /api/auth/session
       const sessionRes = await fetch('/api/auth/session');
       const session = await sessionRes.json();
-      
+
       if (session?.user?.role === 'ADMIN') {
         router.push('/admin')
       } else {
@@ -57,14 +57,14 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-zinc-50 p-6 dark:bg-black">
       <main className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-md dark:bg-zinc-950">
-        
+
         <div className="flex justify-center mb-8">
           <Image
             src="/dfix.png"
             alt="DFIX Logo"
             width={120}
             height={45}
-            className="h-auto w-auto object-contain" 
+            className="h-auto w-auto object-contain"
             priority
           />
         </div>
@@ -95,7 +95,7 @@ export default function LoginPage() {
               type="text"
               required
               className="w-full rounded-lg border border-zinc-300 bg-transparent p-3 text-sm outline-none focus:border-black focus:ring-1 focus:ring-black dark:border-zinc-700 dark:text-white"
-              placeholder="admin_dfix"
+              placeholder="admin"
             />
           </div>
 

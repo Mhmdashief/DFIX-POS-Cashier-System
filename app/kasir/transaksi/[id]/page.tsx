@@ -385,6 +385,19 @@ export default function DetailTransaksiKasirPage() {
         <hr />
         <div className="section-title">Layanan</div>
         <div className="row"><span>{data?.serviceName}</span><span className="bold">: {formatIDR(totalAmount)}</span></div>
+        
+        <div className="section-title">Bahan Digunakan</div>
+        {data?.materials && data.materials.length > 0 ? (
+          data.materials.map((m: any, i: number) => (
+            <div className="row" key={i}>
+              <span>- {m.name} {m.variant ? `(${m.variant})` : ''}</span>
+              <span className="bold">: {m.qty} Pcs</span>
+            </div>
+          ))
+        ) : (
+          <p style={{ fontSize: 13, color: "#555", fontStyle: "italic", margin: "2px 0" }}>Tidak ada bahan digunakan</p>
+        )}
+        
         <hr />
         <div className="row bold"><span>Total harga</span><span>: {formatIDR(totalAmount)}</span></div>
         <hr />

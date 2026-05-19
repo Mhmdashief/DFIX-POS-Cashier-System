@@ -54,8 +54,7 @@ export async function getStockChartData(filter: string) {
 
     const stocks = await prisma.material.findMany({
       where,
-      orderBy: { stock: "asc" },
-      take: 6
+      orderBy: { stock: "asc" }
     });
 
     return stocks.map(s => ({ name: s.name, value: s.stock }));
