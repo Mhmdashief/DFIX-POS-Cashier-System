@@ -64,8 +64,8 @@ export default function KasirDashboard() {
           <StatCard 
             title="Total Pendapatan" 
             value={stats.totalSales >= 1000000 ? `Rp ${(stats.totalSales/1000000).toFixed(1)}jt` : `Rp ${stats.totalSales.toLocaleString('id-ID')}`} 
-            sub="/ Akumulasi" 
-            trend="Pendapatan kotor" 
+            sub="/ Bulan Ini" 
+            trend="Reset tiap tanggal 1" 
             icon={<Receipt size={18} />} 
           />
           <StatCard 

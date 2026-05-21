@@ -73,7 +73,6 @@ export default function DataBahanPage() {
 
   const stats = {
     total: bahan.length,
-    aman: bahan.filter((b) => Number(b.stock) >= 5).length,
     menipis: bahan.filter(
       (b) => Number(b.stock) > 0 && Number(b.stock) < 5
     ).length,
@@ -94,7 +93,7 @@ export default function DataBahanPage() {
       <div className="w-full max-w-7xl mx-auto space-y-10">
 
         {/* Statistik */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {[
             {
               label: "Total Bahan",
@@ -104,15 +103,6 @@ export default function DataBahanPage() {
               color: "text-[#1E1E1E]",
               iconColor: "text-blue-500",
               border: "border-blue-100",
-            },
-            {
-              label: "Stok Aman",
-              value: stats.aman,
-              unit: "Item",
-              icon: <CheckCircle size={22} />,
-              color: "text-[#1E1E1E]",
-              iconColor: "text-green-500",
-              border: "border-green-100",
             },
             {
               label: "Bahan Menipis",
@@ -170,7 +160,7 @@ export default function DataBahanPage() {
         </div>
 
         {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-end gap-4">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <h1 className="text-[24px] font-bold text-[#1E1E1E]">
               Manajemen Bahan
@@ -181,16 +171,16 @@ export default function DataBahanPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 w-full md:w-auto">
             <button
               onClick={() => setIsTambahOpen(true)}
-              className="flex items-center gap-2 px-5 py-3 border border-gray-200 rounded-2xl text-[14px] font-semibold text-gray-600 hover:bg-gray-50 transition-all"
+              className="flex items-center justify-center gap-2 px-5 py-3 border border-gray-200 rounded-2xl text-[14px] font-semibold text-gray-600 hover:bg-gray-50 transition-all w-full sm:w-auto"
             >
               <Plus size={18} className="text-yellow-500" />
               Tambah Bahan
             </button>
 
-            <div className="relative">
+            <div className="relative w-full sm:w-auto">
               <Search
                 className="absolute left-4 top-1/2 -translate-y-1/2 text-yellow-500"
                 size={18}
@@ -198,16 +188,16 @@ export default function DataBahanPage() {
 
               <input
                 placeholder="Search"
-                className="pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-2xl text-[14px] focus:outline-none w-[260px] placeholder:text-gray-400 font-medium"
+                className="pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-2xl text-[14px] focus:outline-none w-full sm:w-[260px] placeholder:text-gray-400 font-medium"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
 
-            <div className="relative">
+            <div className="relative w-full sm:w-auto">
               <Calendar size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-yellow-500 pointer-events-none" />
               <select 
-                className="pl-12 pr-10 py-3 bg-white border border-gray-200 rounded-2xl text-[14px] font-semibold text-gray-600 outline-none hover:bg-gray-50 transition-all cursor-pointer appearance-none"
+                className="pl-12 pr-10 py-3 bg-white border border-gray-200 rounded-2xl text-[14px] font-semibold text-gray-600 outline-none hover:bg-gray-50 transition-all cursor-pointer appearance-none w-full sm:w-auto"
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
               >
@@ -223,13 +213,15 @@ export default function DataBahanPage() {
         </div>
 
         {/* Table Container */}
-        <div className="w-full relative">
-          <table className="w-full text-left border-separate border-spacing-y-0">
+        <div className="w-full relative overflow-x-auto pb-32">
+          <table className="w-full text-left border-separate border-spacing-y-0 min-w-[1000px]">
 
             <thead>
               <tr className="border-b border-gray-100 text-gray-400 text-[13px] uppercase tracking-wider font-bold">
                 <th className="py-4 px-2 w-12 text-center">No</th>
                 <th className="py-4 px-2">Nama Bahan</th>
+                <th className="py-4 px-2">Kategori</th>
+                <th className="py-4 px-2">Varian</th>
                 <th className="py-4 px-2">Stok</th>
                 <th className="py-4 px-2">Satuan</th>
                 <th className="py-4 px-2">Status</th>
@@ -242,7 +234,7 @@ export default function DataBahanPage() {
               {loading ? (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={9}
                     className="py-20 text-center text-gray-400"
                   >
                     Memuat data...
@@ -251,7 +243,7 @@ export default function DataBahanPage() {
               ) : filteredBahan.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={9}
                     className="py-20 text-center text-gray-400"
                   >
                     Data bahan kosong
@@ -271,6 +263,16 @@ export default function DataBahanPage() {
                       {item.name}
                     </td>
 
+                    <td className="py-6 px-2">
+                      <span className="px-2.5 py-1.5 bg-[#2D4F53]/5 text-[#2D4F53] rounded-xl text-[12px] font-black uppercase tracking-wider">
+                        {item.category || "-"}
+                      </span>
+                    </td>
+
+                    <td className="py-6 px-2 text-zinc-500 font-bold italic">
+                      {item.variant || "-"}
+                    </td>
+
                     <td className="py-6 px-2 text-[#1E1E1E] font-bold">
                       {item.stock}
                     </td>
@@ -285,8 +287,8 @@ export default function DataBahanPage() {
                         ${item.stock >= 5
                             ? "bg-[#E2F5EA] text-[#22C55E]"
                             : item.stock > 0
-                              ? "bg-[#FFF9E6] text-[#FACC15]"
-                              : "bg-[#FEE2E2] text-[#EF4444]"
+                               ? "bg-[#FFF9E6] text-[#FACC15]"
+                               : "bg-[#FEE2E2] text-[#EF4444]"
                           }`}
                       >
                         {item.stock >= 5

@@ -1,14 +1,25 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import { signIn } from 'next-auth/react'
 
-export default function LoginPage() {
+function LoginForm() {
   const [isPending, setIsPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
+  const searchParams = useSearchParams()
+
+  // Baca error dari query param (misalnya setelah rate limit redirect)
+  useEffect(() => {
+    const errorParam = searchParams.get('error')
+    const minutesParam = searchParams.get('minutes')
+    if (errorParam === 'TooManyRequests') {
+      const minutes = minutesParam || '15'
+      setError(`Terlalu banyak percobaan gagal. Akun diblokir sementara, coba lagi dalam ${minutes} menit.`)
+    }
+  }, [searchParams])
 
   async function handleSubmit(formData: FormData) {
     setIsPending(true)
@@ -30,14 +41,6 @@ export default function LoginPage() {
         return
       }
 
-      // Berhasil Login - NextAuth akan menangani session
-      // Kita bisa cek session di client atau redirect saja
-      // Karena kita pakai redirect: false, kita harus manual push
-
-      // Ambil role bisa via session, tapi untuk simpelnya kita redirect ke dashboard masing-masing
-      // Biasanya admin punya rute berbeda. Untuk sementara kita arahkan ke /admin atau /kasir
-      // berdasarkan respon atau biarkan middleware menangani.
-      // Namun karena kita butuh role, kita panggil /api/auth/session
       const sessionRes = await fetch('/api/auth/session');
       const session = await sessionRes.json();
 
@@ -124,3 +127,12 @@ export default function LoginPage() {
     </div>
   )
 }
+
+// useSearchParams() wajib dibungkus Suspense di Next.js
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
+  )
+}

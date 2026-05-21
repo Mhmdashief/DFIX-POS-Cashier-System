@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { X, User, Wrench, CreditCard, ChevronDown, FileText, Check, Plus, Search, Minus, ArrowLeft } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { X, User, Wrench, CreditCard, ChevronDown, FileText, Check, Plus, Search, Minus, ArrowLeft, Printer } from "lucide-react";
 import { saveTransactionAction } from "@/app/actions/transaction";
 import { getCustomers } from "@/app/actions/customer";
 import { getMaterials } from "@/app/actions/material";
@@ -63,6 +64,7 @@ function CustomDropdown({ label, value, onChange, options, placeholder, icon: Ic
 type Step = "INFO" | "MATERIAL_LIST" | "MATERIAL_ADD";
 
 export default function ModalTransaksiBaru({ isOpen, onClose, onRefresh }: any) {
+  const router = useRouter();
   const [step, setStep] = useState<Step>("INFO");
   const [isPending, setIsPending] = useState(false);
   const [customers, setCustomers] = useState<any[]>([]);
@@ -171,9 +173,9 @@ export default function ModalTransaksiBaru({ isOpen, onClose, onRefresh }: any) 
         payload.customerId = customerId;
       }
 
-      const result = await saveTransactionAction(payload) as { success: boolean; error?: string };
+      const result = await saveTransactionAction(payload) as { success: boolean; id?: string; error?: string };
 
-      if (result.success) {
+      if (result.success && result.id) {
         // Reset all form state
         setCustomerId("");
         setCustomerName("");
@@ -187,6 +189,8 @@ export default function ModalTransaksiBaru({ isOpen, onClose, onRefresh }: any) 
         setStep("INFO");
         onRefresh();
         onClose();
+        // Langsung arahkan ke halaman cetak nota
+        router.push(`/print/transaksi/${result.id}`);
       } else {
         alert("Gagal menyimpan transaksi: " + result.error);
       }
@@ -436,8 +440,15 @@ export default function ModalTransaksiBaru({ isOpen, onClose, onRefresh }: any) 
           ) : (
             <>
               <button type="button" onClick={handleBack} className="w-full py-3 bg-white border border-zinc-200 text-zinc-500 rounded-xl text-sm font-bold active:scale-95 hover:bg-zinc-50 transition-all">Kembali</button>
-              <button type="button" onClick={handleSubmit} disabled={isPending} className="w-full py-3 bg-[#2D4E53] text-white rounded-xl text-sm font-bold active:scale-95 shadow-md hover:bg-[#233d40] transition-all disabled:opacity-50">
-                {isPending ? "..." : "Simpan"}
+              <button type="button" onClick={handleSubmit} disabled={isPending} className="w-full py-3 bg-[#2D4E53] text-white rounded-xl text-sm font-bold active:scale-95 shadow-md hover:bg-[#233d40] transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+                {isPending ? (
+                  <span>Menyimpan...</span>
+                ) : (
+                  <>
+                    <Printer size={15} />
+                    Simpan & Cetak Nota
+                  </>
+                )}
               </button>
             </>
           )}

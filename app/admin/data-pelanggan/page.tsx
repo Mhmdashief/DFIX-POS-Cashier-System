@@ -179,13 +179,13 @@ export default function DataPelangganPage() {
       </div>
 
       {/* HEADER & SEARCH */}
-      <div className="flex flex-col md:flex-row justify-between items-end gap-4 mb-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-zinc-900 leading-tight">Data Seluruh Pelanggan</h1>
           <p className="text-sm text-zinc-400 font-medium">Mengatur Seluruh Data Pelanggan</p>
         </div>
         <div className="flex gap-3 w-full md:w-auto">
-          <div className="relative flex-1 md:w-64">
+          <div className="relative flex-1 w-full md:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
             <input placeholder="Search" className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-zinc-200 outline-none text-sm focus:border-zinc-400 shadow-sm" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
           </div>
@@ -194,9 +194,8 @@ export default function DataPelangganPage() {
 
       {/* TABLE */}
       <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm relative z-20 overflow-visible">
-
-
-        <table className="w-full text-left border-collapse">
+        <div className="overflow-x-auto pb-32">
+          <table className="w-full text-left border-collapse min-w-[800px]">
           <thead>
             <tr className="text-zinc-400 text-[11px] font-bold border-b border-zinc-50 uppercase tracking-widest">
               <th className="py-6 px-6">No</th>
@@ -215,9 +214,9 @@ export default function DataPelangganPage() {
                 <td className="py-4 px-6 text-sm font-bold text-zinc-800">{c.name}</td>
                 <td className="py-4 px-6 text-sm text-zinc-600">{c.phone || "-"}</td>
                 <td className="py-4 px-6 text-sm text-zinc-500 truncate max-w-[150px]">{c.address || "-"}</td>
-                <td className="py-4 px-6 text-sm font-bold text-[#161616]">0</td>
+                <td className="py-4 px-6 text-sm font-bold text-[#161616]">{c.transactions?.length || 0}</td>
                 <td className="py-4 px-6 text-sm text-zinc-600 flex items-center gap-2">
-                  <Calendar size={14} className="text-orange-400" /> {formatDate(c.createdAt)}
+                  <Calendar size={14} className="text-orange-400" /> {c.transactions?.[0] ? formatDate(c.transactions[0].createdAt) : "-"}
                 </td>
                 <td className="py-4 px-6 text-right relative">
                   <button onClick={() => setActiveMenu(activeMenu === c.id ? null : c.id)} className="p-2 hover:bg-zinc-100 rounded-lg transition-colors"><MoreHorizontal size={20} className="text-zinc-400" /></button>
@@ -238,6 +237,7 @@ export default function DataPelangganPage() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       <ModalPelanggan 

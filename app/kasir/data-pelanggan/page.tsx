@@ -168,9 +168,8 @@ export default function DataPelangganKasirPage() {
 
       {/* TABLE BOX */}
       <div className="bg-white rounded-[24px] border border-zinc-100 shadow-sm overflow-visible relative z-20">
-        <div className="overflow-visible">
-
-          <table className="w-full text-left border-collapse">
+        <div className="overflow-x-auto pb-32">
+          <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>
               <tr className="text-zinc-400 text-[10px] font-black border-b border-zinc-50 uppercase tracking-[0.2em] bg-zinc-50/30">
                 <th className="py-6 px-8 w-16">No</th>

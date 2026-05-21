@@ -93,19 +93,19 @@ export default function DataJasaPage() {
         <StatCard title="Jasa Aktif" value={jasa.filter(j => j.status === 'Aktif').length} sub="Jasa" trendValue="Normal" trendColor="green" desc="Layanan yang aktif" icon={<CheckCircle2 size={20} className="text-yellow-500" />} />
       </div>
 
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <div>
           <h1 className="text-[18px] font-bold text-zinc-900 mb-1">Tabel Data Jasa</h1>
           <p className="text-[13px] text-zinc-400 font-medium">Daftar seluruh jenis jasa reparasi.</p>
         </div>
-        <div className="flex gap-3 w-full md:w-auto">
+        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
           <button
             onClick={() => { setEditData(null); setIsModalOpen(true); }}
-            className="flex items-center gap-2 px-6 py-2.5 bg-white border border-zinc-200 rounded-xl text-sm font-bold text-zinc-600 hover:bg-zinc-50 transition-all active:scale-95"
+            className="flex items-center justify-center gap-2 px-6 py-2.5 bg-white border border-zinc-200 rounded-xl text-sm font-bold text-zinc-600 hover:bg-zinc-50 transition-all active:scale-95 w-full sm:w-auto"
           >
             <Plus size={18} className="text-yellow-500" /> Tambah Jasa
           </button>
-          <div className="relative flex-1 md:w-64">
+          <div className="relative flex-1 w-full md:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-300" size={18} />
             <input
               placeholder="Cari Jasa..."
@@ -117,8 +117,8 @@ export default function DataJasaPage() {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-zinc-100 relative">
-        <table className="w-full text-left border-collapse">
+      <div className="bg-white rounded-2xl border border-zinc-100 relative overflow-x-auto">
+        <table className="w-full text-left border-collapse min-w-[800px]">
           <thead className="bg-zinc-50/20 text-zinc-400 text-[12px] font-bold uppercase tracking-wider border-b border-zinc-50">
             <tr>
               <th className="py-4 px-6">No</th>

@@ -37,7 +37,7 @@ function CustomSelect({ value, onChange, options, icon: Icon }: {
   const selected = options.find(o => o.value === value);
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className="relative w-full sm:w-auto">
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
@@ -154,9 +154,23 @@ export default function LaporanTransaksiPage() {
   });
 
   // ── Stats ──
-  const totalPendapatan = laporanBase.reduce((acc, t) => acc + (Number(t.totalAmount) || 0), 0);
-  const masihProses = allTransactions.filter(t => t.orderStatus !== "Selesai" && t.orderStatus !== "Dibatalkan" && !t.isDeleted).length;
-  const belumLunas = allTransactions.filter(t => t.paymentStatus !== "LUNAS" && !t.isDeleted).length;
+  const countTransaksiSelesai = filtered.length;
+  const totalPendapatan = filtered.reduce((acc, t) => acc + (Number(t.totalAmount) || 0), 0);
+
+  const getTrendText = () => {
+    if (periode === "semua") return "Semua transaksi selesai";
+    if (periode === "minggu") return "7 hari terakhir";
+    if (periode === "bulan") return "Bulan ini";
+    if (periode === "custom") {
+      if (customStart && customEnd) {
+        return `${formatDate(customStart)} - ${formatDate(customEnd)}`;
+      }
+      if (customStart) return `Sejak ${formatDate(customStart)}`;
+      if (customEnd) return `Hingga ${formatDate(customEnd)}`;
+      return "Rentang kustom";
+    }
+    return "Lunas + Selesai";
+  };
 
   // ── Export ──
   const exportToPDF = () => {
@@ -174,6 +188,12 @@ export default function LaporanTransaksiPage() {
         `${item.category || ""} - ${item.serviceName || ""}`,
         formatIDR(item.totalAmount || 0),
       ]),
+      foot: [["", "", "", "Total Pendapatan", formatIDR(totalPendapatan)]],
+      footStyles: {
+        fillColor: [45, 79, 83], // #2D4F53
+        textColor: [255, 255, 255],
+        fontStyle: "bold",
+      },
       startY: 28,
     });
     doc.save(`Laporan_Transaksi_Selesai.pdf`);
@@ -181,14 +201,77 @@ export default function LaporanTransaksiPage() {
   };
 
   const exportToExcel = () => {
-    const ws = XLSX.utils.json_to_sheet(filtered.map(item => ({
+    const excelData = filtered.map((item, index) => ({
+      "No.": index + 1,
       Tanggal: formatDate(item.createdAt),
-      Kode: item.invoiceCode || `TRX-${item.id.slice(0, 8)}`,
-      Pelanggan: item.customer?.name || item.customerName || "Umum",
+      "Kode Transaksi": item.invoiceCode || `TRX-${item.id.slice(0, 8)}`,
+      "Nama Pelanggan": item.customer?.name || item.customerName || "Umum",
       Kategori: item.category || "",
       Jasa: item.serviceName || "",
-      Total: item.totalAmount || 0,
-    })));
+      Nominal: item.totalAmount || 0,
+    }));
+
+    // Add empty row for spacing
+    excelData.push({
+      "No.": "" as any,
+      Tanggal: "",
+      "Kode Transaksi": "",
+      "Nama Pelanggan": "",
+      Kategori: "",
+      Jasa: "",
+      Nominal: "" as any,
+    });
+
+    // Add Total Row
+    excelData.push({
+      "No.": "TOTAL PENDAPATAN" as any,
+      Tanggal: "",
+      "Kode Transaksi": "",
+      "Nama Pelanggan": "",
+      Kategori: "",
+      Jasa: "",
+      Nominal: totalPendapatan as any,
+    });
+
+    const ws = XLSX.utils.json_to_sheet(excelData);
+
+    // Auto-fit column widths (with a minimum baseline)
+    const max_widths = [5, 12, 16, 18, 12, 15, 15]; // index 0 to 6
+    filtered.forEach((item, index) => {
+      const rowNum = (index + 1).toString();
+      const dateStr = formatDate(item.createdAt);
+      const invoiceStr = item.invoiceCode || `TRX-${item.id.slice(0, 8)}`;
+      const customerStr = item.customer?.name || item.customerName || "Umum";
+      const catStr = item.category || "";
+      const serviceStr = item.serviceName || "";
+      const nominalStr = formatIDR(item.totalAmount || 0);
+
+      if (rowNum.length > max_widths[0]) max_widths[0] = rowNum.length;
+      if (dateStr.length > max_widths[1]) max_widths[1] = dateStr.length;
+      if (invoiceStr.length > max_widths[2]) max_widths[2] = invoiceStr.length;
+      if (customerStr.length > max_widths[3]) max_widths[3] = customerStr.length;
+      if (catStr.length > max_widths[4]) max_widths[4] = catStr.length;
+      if (serviceStr.length > max_widths[5]) max_widths[5] = serviceStr.length;
+      if (nominalStr.length > max_widths[6]) max_widths[6] = nominalStr.length;
+    });
+    ws["!cols"] = max_widths.map(w => ({ wch: w + 4 })); // add padding
+
+    // Merge A to F (No., Tanggal, Kode Transaksi, Nama Pelanggan, Kategori, Jasa) for the total row
+    ws["!merges"] = [
+      { s: { r: filtered.length + 2, c: 0 }, e: { r: filtered.length + 2, c: 5 } }
+    ];
+
+    // Apply currency formatting to the Nominal column (Column G, index 6)
+    const range = XLSX.utils.decode_range(ws['!ref'] || '');
+    for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+      const cellRef = XLSX.utils.encode_cell({ r: R, c: 6 });
+      const cell = ws[cellRef];
+      if (cell && typeof cell.v === 'number') {
+        cell.t = 'n';
+        cell.z = '"Rp"#,##0'; // Excel custom IDR format: Rp 20.000.000
+      }
+    }
+
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Laporan Selesai");
     XLSX.writeFile(wb, `Laporan_Transaksi_Selesai.xlsx`);
@@ -207,16 +290,11 @@ export default function LaporanTransaksiPage() {
       <div className="max-w-7xl mx-auto space-y-6">
 
         {/* STATS */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full text-left">
-          <StatCard title="Transaksi Selesai" value={laporanBase.length} trend="Lunas + Selesai"
-            icon={<CheckCircle2 size={20} />} color="text-emerald-500" />
-          <StatCard title="Total Pendapatan"
-            value={totalPendapatan >= 1000000 ? `Rp ${(totalPendapatan / 1000000).toFixed(1)}jt` : formatIDR(totalPendapatan)}
-            trend="Dari transaksi selesai" icon={<TrendingUp size={20} />} color="text-indigo-500" />
-          <StatCard title="Belum Lunas" value={belumLunas} trend="Perlu ditindaklanjuti"
-            icon={<FileText size={20} />} isPositive={false} color="text-rose-400" />
-          <StatCard title="Masih Diproses" value={masihProses} trend="Sedang dikerjakan"
-            icon={<Clock size={20} />} isPositive={false} color="text-amber-500" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full text-left">
+          <StatCard title="Transaksi Selesai" value={countTransaksiSelesai} trend={getTrendText()}
+            icon={<CheckCircle2 size={20} />} color="text-[#2D4F53]" />
+          <StatCard title="Total Pendapatan" value={formatIDR(totalPendapatan)} trend={getTrendText()}
+            icon={<TrendingUp size={20} />} color="text-indigo-600" />
         </div>
 
         {/* MAIN CARD */}
@@ -224,19 +302,19 @@ export default function LaporanTransaksiPage() {
 
           {/* Header */}
           <div className="p-6 md:p-8 pb-5 border-b border-zinc-50">
-            <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-5">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
               <div>
                 <h1 className="text-[20px] font-black tracking-tight text-[#2D4F53]">Laporan Transaksi Selesai</h1>
                 <p className="text-[12px] text-zinc-400 mt-0.5 font-medium">
                 </p>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2.5">
+              <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2.5 w-full lg:w-auto">
                 {/* Search */}
-                <div className="relative">
+                <div className="relative w-full sm:w-auto">
                   <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
                   <input type="text" placeholder="Cari kode / nama..."
-                    className="pl-9 pr-4 py-2.5 rounded-2xl border border-zinc-200 bg-white text-[12px] font-medium focus:outline-none focus:border-[#2D4F53] transition-all w-[185px] placeholder:text-zinc-300"
+                    className="pl-9 pr-4 py-2.5 rounded-2xl border border-zinc-200 bg-white text-[12px] font-medium focus:outline-none focus:border-[#2D4F53] transition-all w-full sm:w-[185px] placeholder:text-zinc-300"
                     onChange={e => setSearchQuery(e.target.value)} />
                 </div>
 
@@ -245,9 +323,9 @@ export default function LaporanTransaksiPage() {
                   options={periodeOptions} icon={Calendar} />
 
                 {/* Export */}
-                <div className="relative" ref={exportRef}>
+                <div className="relative w-full sm:w-auto" ref={exportRef}>
                   <button onClick={() => setOpenExport(o => !o)}
-                    className="flex items-center gap-2 px-4 py-2.5 bg-[#2D4F53] text-white rounded-2xl text-[12px] font-bold hover:bg-[#1e3a3d] transition-all active:scale-95 shadow-sm shadow-[#2D4F53]/20">
+                    className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#2D4F53] text-white rounded-2xl text-[12px] font-bold hover:bg-[#1e3a3d] transition-all active:scale-95 shadow-sm shadow-[#2D4F53]/20 w-full sm:w-auto">
                     <Download size={14} /> Export
                   </button>
                   {openExport && (
@@ -352,6 +430,19 @@ export default function LaporanTransaksiPage() {
                   </tr>
                 ))}
               </tbody>
+              {filtered.length > 0 && (
+                <tfoot>
+                  <tr className="bg-zinc-50/50 border-t-2 border-zinc-100 font-bold">
+                    <td colSpan={4} className="py-4 px-6 text-[13px] text-zinc-500 text-right uppercase tracking-wider font-black">
+                      Total Pendapatan ({periodeOptions.find(o => o.value === periode)?.label || "Semua"})
+                    </td>
+                    <td className="py-4 px-6 text-right text-[15px] text-[#2D4F53] font-black">
+                      {formatIDR(totalPendapatan)}
+                    </td>
+                    <td className="py-4 px-6"></td>
+                  </tr>
+                </tfoot>
+              )}
             </table>
           </div>
 

@@ -25,6 +25,7 @@ export default function TransaksiReparasiPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [showStatusOptions, setShowStatusOptions] = useState(false);
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
 
   const fetchTransactions = async () => {
     setLoading(true);
@@ -108,20 +109,48 @@ export default function TransaksiReparasiPage() {
 
             {/* FILTER */}
             <div className="relative min-w-[160px]">
-              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none">
-                <Filter size={14} />
-              </div>
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full pl-10 pr-10 py-3 bg-zinc-50 border border-zinc-100 rounded-2xl text-[13px] font-bold text-zinc-600 appearance-none focus:outline-none cursor-pointer hover:bg-zinc-100 transition-all"
+              <button
+                type="button"
+                onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                className="w-full flex items-center justify-between pl-10 pr-4 py-3 bg-zinc-50 border border-zinc-100 rounded-2xl text-[13px] font-bold text-zinc-600 focus:outline-none hover:bg-zinc-100 transition-all shadow-sm"
               >
-                <option value="Semua">Semua Status</option>
-                <option value="Diproses">Diproses</option>
-                <option value="Selesai">Selesai</option>
-                <option value="Dibatalkan">Dibatalkan</option>
-              </select>
-              <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" size={14} />
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none">
+                  <Filter size={14} />
+                </div>
+                <span>{statusFilter === "Semua" ? "Semua Status" : statusFilter}</span>
+                <ChevronDown size={14} className={`text-zinc-400 transition-transform ${showFilterDropdown ? 'rotate-180' : ''}`} />
+              </button>
+
+              {showFilterDropdown && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowFilterDropdown(false)} />
+                  <div className="absolute right-0 mt-2 w-full bg-white border border-zinc-100 rounded-2xl z-50 py-2 shadow-2xl animate-in fade-in slide-in-from-top-2 duration-150">
+                    {[
+                      { value: "Semua", label: "Semua Status" },
+                      { value: "Diproses", label: "Diproses" },
+                      { value: "Selesai", label: "Selesai" },
+                      { value: "Dibatalkan", label: "Dibatalkan" }
+                    ].map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => {
+                          setStatusFilter(opt.value);
+                          setShowFilterDropdown(false);
+                        }}
+                        className={`w-full px-5 py-3 text-left text-[13px] font-bold transition-all flex items-center justify-between ${
+                          statusFilter === opt.value 
+                            ? 'bg-[#2D4F53]/5 text-[#2D4F53]' 
+                            : 'text-zinc-600 hover:bg-zinc-50'
+                        }`}
+                      >
+                        {opt.label}
+                        {statusFilter === opt.value && <div className="w-1.5 h-1.5 rounded-full bg-[#2D4F53]" />}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>

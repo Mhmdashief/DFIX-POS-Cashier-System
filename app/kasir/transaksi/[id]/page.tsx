@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft, Loader2, AlertCircle, User, FileText,
-  CreditCard, Package, Printer, CheckCircle2, X, Wallet
+  CreditCard, Package, Printer, CheckCircle2, X, Wallet, ChevronDown, Check
 } from "lucide-react";
 import { getTransactionById, updatePaymentStatusAction } from "@/app/actions/transaction";
 
@@ -23,8 +23,9 @@ export default function DetailTransaksiKasirPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [showPayPanel, setShowPayPanel] = useState(false);
   const [payMethod, setPayMethod] = useState("");
+  const [payMethodDropdownOpen, setPayMethodDropdownOpen] = useState(false);
   const [paying, setPaying] = useState(false);
-  const printRef = useRef<HTMLDivElement>(null);
+
 
   const fetchData = async () => {
     if (!params?.id) { setErrorMsg("ID tidak ditemukan"); setLoading(false); return; }
@@ -59,25 +60,9 @@ export default function DetailTransaksiKasirPage() {
   };
 
   const handlePrint = () => {
-    const printContent = printRef.current?.innerHTML;
-    if (!printContent) return;
-    const win = window.open("", "_blank");
-    if (!win) return;
-    win.document.write(`
-      <html><head><title>Nota - ${data?.invoiceCode || data?.id}</title>
-      <style>
-        body { font-family: sans-serif; margin: 0; padding: 24px; color: #161616; max-width: 380px; }
-        .logo-box { background: #e53935; color: white; font-weight: 900; font-size: 22px; padding: 6px 14px; border-radius: 8px; display: inline-block; font-style: italic; }
-        h2 { font-size: 16px; font-weight: 700; margin: 12px 0 2px; }
-        p { margin: 2px 0; font-size: 13px; color: #555; }
-        hr { border: none; border-top: 1px solid #eee; margin: 12px 0; }
-        .row { display: flex; justify-content: space-between; font-size: 13px; margin: 6px 0; }
-        .bold { font-weight: 700; }
-        .section-title { font-weight: 700; font-size: 13px; margin: 14px 0 6px; }
-      </style></head><body>${printContent}</body></html>
-    `);
-    win.document.close();
-    win.print();
+    // Opens the dedicated standalone print page — no sidebar/header,
+    // pure receipt HTML, auto-triggers window.print() on load.
+    window.open(`/print/transaksi/${params.id}`, "_blank");
   };
 
   if (loading) return (
@@ -341,21 +326,66 @@ export default function DetailTransaksiKasirPage() {
                 </div>
               </div>
 
-              <div>
+              <div className="relative">
                 <p className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1.5">Pilih Metode Pembayaran</p>
-                <div className="relative">
-                  <Wallet size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
-                  <select
-                    value={payMethod}
-                    onChange={e => setPayMethod(e.target.value)}
-                    className="w-full pl-9 pr-4 py-3 border border-zinc-200 rounded-xl text-[13px] font-bold appearance-none focus:outline-none focus:border-[#2D4F53]"
-                  >
-                    <option value="">Pilih Metode Pembayarannya</option>
-                    <option value="Cash">Cash</option>
-                    <option value="Transfer">Transfer Bank</option>
-                    <option value="QRIS">QRIS</option>
-                  </select>
-                </div>
+                
+                <button
+                  type="button"
+                  onClick={() => setPayMethodDropdownOpen(!payMethodDropdownOpen)}
+                  className={`w-full flex items-center justify-between pl-4 pr-4 py-3 bg-white border rounded-xl text-[13px] font-bold transition-all duration-200 ${
+                    payMethodDropdownOpen 
+                      ? "border-[#2D4F53] ring-4 ring-[#2D4F53]/5" 
+                      : "border-zinc-200 hover:border-zinc-300"
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Wallet size={15} className="text-[#2D4F53]" />
+                    <span className={payMethod ? "text-zinc-800" : "text-zinc-400"}>
+                      {payMethod === "Cash" ? "Cash / Tunai" :
+                       payMethod === "Transfer" ? "Transfer Bank" :
+                       payMethod === "QRIS" ? "QRIS / E-Wallet" : "Pilih Metode Pembayaran"}
+                    </span>
+                  </div>
+                  <ChevronDown size={15} className={`text-zinc-400 transition-transform duration-200 ${payMethodDropdownOpen ? "rotate-180" : ""}`} />
+                </button>
+
+                {payMethodDropdownOpen && (
+                  <>
+                    {/* Backdrop to close click outside */}
+                    <div className="fixed inset-0 z-30" onClick={() => setPayMethodDropdownOpen(false)} />
+                    
+                    <div className="absolute left-0 right-0 mt-1.5 bg-white border border-zinc-100 rounded-xl shadow-xl z-40 py-1.5 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150">
+                      {[
+                        { value: "Cash", label: "Cash / Tunai", desc: "Bayar langsung dengan uang tunai", color: "bg-emerald-50 text-emerald-600 border-emerald-100" },
+                        { value: "Transfer", label: "Transfer Bank", desc: "Transfer via Virtual Account / Rekening", color: "bg-blue-50 text-blue-600 border-blue-100" },
+                        { value: "QRIS", label: "QRIS / E-Wallet", desc: "Scan QR menggunakan e-wallet / m-banking", color: "bg-purple-50 text-purple-600 border-purple-100" }
+                      ].map((opt) => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => {
+                            setPayMethod(opt.value);
+                            setPayMethodDropdownOpen(false);
+                          }}
+                          className="w-full px-4 py-3 text-left hover:bg-zinc-50 flex items-center justify-between transition-colors border-b border-zinc-50 last:border-0"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase border ${opt.color}`}>
+                              {opt.value}
+                            </span>
+                            <div className="text-left">
+                              <p className="text-[13px] font-bold text-zinc-800 leading-tight">{opt.label}</p>
+                              <p className="text-[10px] text-zinc-400 mt-0.5 leading-none">{opt.desc}</p>
+                            </div>
+                          </div>
+                          {payMethod === opt.value && (
+                            <Check className="text-[#2D4F53]" size={15} />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
@@ -371,45 +401,7 @@ export default function DetailTransaksiKasirPage() {
         </div>
       )}
 
-      {/* PRINT TEMPLATE (hidden) */}
-      <div ref={printRef} style={{ display: "none" }}>
-        <div style={{ textAlign: "center", marginBottom: 16 }}>
-          <div className="logo-box">D'fix</div>
-          <h2 style={{ marginTop: 10 }}>Toko Reparasi D'fix</h2>
-          <p>{invoiceCode} &nbsp; {new Date(data?.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}</p>
-        </div>
-        <hr />
-        <div className="row"><span>ID Transaksi</span><span className="bold">: {invoiceCode}</span></div>
-        <div className="row"><span>Pelanggan</span><span className="bold">: {nama}</span></div>
-        <div className="row"><span>Tanggal</span><span className="bold">: {new Date(data?.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}</span></div>
-        <hr />
-        <div className="section-title">Layanan</div>
-        <div className="row"><span>{data?.serviceName}</span><span className="bold">: {formatIDR(totalAmount)}</span></div>
-        
-        <div className="section-title">Bahan Digunakan</div>
-        {data?.materials && data.materials.length > 0 ? (
-          data.materials.map((m: any, i: number) => (
-            <div className="row" key={i}>
-              <span>- {m.name} {m.variant ? `(${m.variant})` : ''}</span>
-              <span className="bold">: {m.qty} Pcs</span>
-            </div>
-          ))
-        ) : (
-          <p style={{ fontSize: 13, color: "#555", fontStyle: "italic", margin: "2px 0" }}>Tidak ada bahan digunakan</p>
-        )}
-        
-        <hr />
-        <div className="row bold"><span>Total harga</span><span>: {formatIDR(totalAmount)}</span></div>
-        <hr />
-        <div className="section-title">Pembayaran</div>
-        <div className="row"><span>DP</span><span className="bold">: {formatIDR(dpAmount)}</span></div>
-        <div className="row"><span>Sisa</span><span className="bold">: {formatIDR(sisa)}</span></div>
-        <div className="row"><span>Metode</span><span className="bold">: {data?.paymentMethod || "-"}</span></div>
-        <div className="row"><span>Status</span><span className="bold">: {data?.paymentStatus || "-"}</span></div>
-        <hr />
-        <div className="section-title">Catatan</div>
-        <p style={{ fontSize: 13, color: "#555" }}>{data?.notes || "Tidak ada catatan"}</p>
-      </div>
+
     </div>
   );
 }

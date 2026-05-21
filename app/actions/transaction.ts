@@ -110,7 +110,7 @@ export async function saveTransactionAction(data: any, id?: string) {
       revalidatePath("/kasir");
       revalidatePath("/admin/laporan-bahan");
       
-      return { success: true };
+      return { success: true, id: transaction.id };
     });
   } catch (error: any) {
     console.error("Failed to save transaction:", error);
@@ -186,7 +186,14 @@ export async function getDashboardStats() {
       prisma.customer.count()
     ]);
 
-    const totalIncome = allTrans.reduce((acc, curr) => acc + (curr.dpAmount || 0), 0);
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const totalIncome = allTrans
+      .filter(t => new Date(t.createdAt) >= startOfMonth)
+      .reduce((acc, curr) => acc + (curr.dpAmount || 0), 0);
+
     const pending = allTrans.filter(t => t.orderStatus !== 'Selesai' && t.orderStatus !== 'Dibatalkan').length;
     const completed = allTrans.filter(t => t.orderStatus === 'Selesai').length;
 

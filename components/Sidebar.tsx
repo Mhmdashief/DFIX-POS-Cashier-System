@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import {
   LayoutDashboard, Receipt, BarChart3, Users, FileText,
-  LogOut, ChevronDown, ChevronUp, LucideIcon
+  LogOut, ChevronDown, ChevronUp, LucideIcon, X
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -29,7 +29,13 @@ interface UserData {
   status: string;
 }
 
-export default function Sidebar({ role }: { role: 'admin' | 'kasir' }) {
+interface SidebarProps {
+  role: 'admin' | 'kasir';
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export default function Sidebar({ role, isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
@@ -93,7 +99,29 @@ export default function Sidebar({ role }: { role: 'admin' | 'kasir' }) {
   const menu = role === 'admin' ? adminMenu : kasirMenu;
 
   return (
-    <aside className="w-64 min-h-screen bg-white border-r border-zinc-200 p-6 flex flex-col sticky top-0">
+    <>
+      {/* Mobile Backdrop */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden transition-opacity" 
+          onClick={onClose}
+        />
+      )}
+
+      {/* Sidebar Panel */}
+      <aside className={`
+        fixed lg:sticky top-0 left-0 z-50 w-64 min-h-screen bg-white border-r border-zinc-200 p-6 flex flex-col
+        transition-transform duration-300 ease-in-out
+        ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+      `}>
+        {/* Mobile Close Button */}
+        <button 
+          className="absolute top-6 right-4 lg:hidden text-zinc-400 hover:text-zinc-600"
+          onClick={onClose}
+        >
+          <X size={20} />
+        </button>
+
       {/* Logo Section */}
       <div className="mb-10 px-2">
         <Image
@@ -176,5 +204,6 @@ export default function Sidebar({ role }: { role: 'admin' | 'kasir' }) {
         </Link>
       </div>
     </aside>
+    </>
   );
 }

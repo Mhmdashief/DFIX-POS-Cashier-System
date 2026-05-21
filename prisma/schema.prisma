@@ -64,6 +64,7 @@ model Service {
   category  String   // kategori
   price     Int      @default(0) // harga
   status    String   @default("Aktif") // "Aktif" atau "Nonaktif"
+  updatedAt DateTime @default(now()) @updatedAt
   createdAt DateTime @default(now())
 }
 

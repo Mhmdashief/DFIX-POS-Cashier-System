@@ -34,6 +34,7 @@ export default function AdminTransaksiPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("Semua");
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
 
   const fetchTransactions = async () => {
     setLoading(true);
@@ -79,9 +80,9 @@ export default function AdminTransaksiPage() {
             <p className="text-[12px] text-zinc-400 font-bold uppercase tracking-wider mt-0.5">Riwayat Pengerjaan Customer — Read Only</p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
             {/* SEARCH */}
-            <div className="relative flex-1 md:w-64 min-w-[180px]">
+            <div className="relative flex-1 w-full md:w-64 min-w-[180px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-300" size={16} />
               <input
                 type="text"
@@ -92,27 +93,55 @@ export default function AdminTransaksiPage() {
             </div>
 
             {/* FILTER STATUS */}
-            <div className="relative min-w-[150px]">
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none">
-                <Filter size={14} />
-              </div>
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full pl-9 pr-10 py-2.5 bg-zinc-50 border border-zinc-100 rounded-xl text-[13px] font-bold text-zinc-600 appearance-none focus:outline-none cursor-pointer hover:bg-zinc-100 transition-all"
+            <div className="relative w-full sm:w-auto min-w-[150px]">
+              <button
+                type="button"
+                onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                className="w-full flex items-center justify-between pl-10 pr-4 py-2.5 bg-zinc-50 border border-zinc-100 rounded-xl text-[13px] font-bold text-zinc-600 focus:outline-none hover:bg-zinc-100 transition-all shadow-sm"
               >
-                <option value="Semua">Semua Status</option>
-                <option value="Diproses">Diproses</option>
-                <option value="Selesai">Selesai</option>
-                <option value="Dibatalkan">Dibatalkan</option>
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" size={14} />
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none">
+                  <Filter size={14} />
+                </div>
+                <span>{statusFilter === "Semua" ? "Semua Status" : statusFilter}</span>
+                <ChevronDown size={14} className={`text-zinc-400 transition-transform ${showFilterDropdown ? 'rotate-180' : ''}`} />
+              </button>
+
+              {showFilterDropdown && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowFilterDropdown(false)} />
+                  <div className="absolute right-0 mt-2 w-full bg-white border border-zinc-100 rounded-xl z-50 py-2 shadow-2xl animate-in fade-in slide-in-from-top-2 duration-150">
+                    {[
+                      { value: "Semua", label: "Semua Status" },
+                      { value: "Diproses", label: "Diproses" },
+                      { value: "Selesai", label: "Selesai" },
+                      { value: "Dibatalkan", label: "Dibatalkan" }
+                    ].map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => {
+                          setStatusFilter(opt.value);
+                          setShowFilterDropdown(false);
+                        }}
+                        className={`w-full px-5 py-2.5 text-left text-[13px] font-bold transition-all flex items-center justify-between ${
+                          statusFilter === opt.value 
+                            ? 'bg-[#2D4F53]/5 text-[#2D4F53]' 
+                            : 'text-zinc-600 hover:bg-zinc-50'
+                        }`}
+                      >
+                        {opt.label}
+                        {statusFilter === opt.value && <div className="w-1.5 h-1.5 rounded-full bg-[#2D4F53]" />}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
 
         <div className="overflow-x-auto min-h-[400px]">
-          <table className="w-full text-left">
+          <table className="w-full text-left min-w-[1000px]">
             <thead>
               <tr className="text-zinc-400 text-[11px] font-bold uppercase tracking-widest border-b border-zinc-50 bg-zinc-50/30">
                 <th className="py-4 px-6">Kode Order</th>

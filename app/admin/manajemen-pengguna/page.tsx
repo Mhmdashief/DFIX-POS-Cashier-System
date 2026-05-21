@@ -98,24 +98,24 @@ export default function ManajemenPenggunaPage() {
 
         {/* TABLE SECTION */}
         <div className="bg-white rounded-xl border border-zinc-100 shadow-none overflow-visible">
-          <div className="p-6 pb-4 flex flex-col md:flex-row justify-between items-center gap-4 border-b border-zinc-50">
+          <div className="p-6 pb-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-zinc-50">
             <h2 className="text-[18px] font-bold text-[#161616]">Manajemen Pengguna</h2>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto">
               <button
                 onClick={() => { setEditingUser(null); setIsModalOpen(true); }}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg border border-zinc-200 text-[13px] font-bold text-zinc-600 hover:bg-zinc-50"
+                className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-zinc-200 text-[13px] font-bold text-zinc-600 hover:bg-zinc-50 w-full sm:w-auto"
               >
                 <UserPlus size={16} /> Tambah Pengguna
               </button>
               <input
                 type="text" placeholder="Cari nama..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-4 pr-4 py-2 rounded-lg border border-zinc-200 text-[13px] focus:outline-none w-64"
+                className="pl-4 pr-4 py-2 rounded-lg border border-zinc-200 text-[13px] focus:outline-none w-full sm:w-64"
               />
             </div>
           </div>
 
           <div className="overflow-x-auto min-h-[500px]">
-            <table className="w-full text-left">
+            <table className="w-full text-left min-w-[800px]">
               <thead>
                 <tr className="text-zinc-400 text-[13px] font-medium border-b border-zinc-50">
                   <th className="py-4 px-6 w-16">No</th>
