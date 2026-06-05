@@ -117,7 +117,7 @@ export default function DataJasaPage() {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-zinc-100 relative overflow-x-auto">
+      <div className="bg-white rounded-2xl border border-zinc-100 relative overflow-x-auto pb-28">
         <table className="w-full text-left border-collapse min-w-[800px]">
           <thead className="bg-zinc-50/20 text-zinc-400 text-[12px] font-bold uppercase tracking-wider border-b border-zinc-50">
             <tr>
@@ -137,7 +137,7 @@ export default function DataJasaPage() {
               <tr><td colSpan={7} className="py-10 text-center text-zinc-400 font-sans">Tidak ada data ditemukan.</td></tr>
             ) : (
               filtered.map((item, index) => {
-                const cats = item.kategori?.split(', ') || [];
+                const cats = item.category?.split(',').map((s: string) => s.trim()).filter(Boolean) || [];
                 return (
                   <tr key={item.id} className="hover:bg-zinc-50/50 transition-colors">
                     <td className="py-5 px-6 text-sm font-medium text-zinc-400">{(index + 1).toString().padStart(2, '0')}</td>

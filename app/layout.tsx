@@ -5,6 +5,13 @@ import Providers from "@/components/Providers";
 
 const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"] });
 
+export const metadata = {
+  title: "D'fix POS",
+  icons: {
+    icon: "/dfix.png",
+  },
+};
+
 export default function RootLayout({
   children,
 }: {

@@ -100,17 +100,36 @@ model Transaction {
   customer          Customer? @relation(fields: [customerId], references: [id])
   customerId        String?
   customerName      String?
-  serviceName       String?  // jenis_jasa
-  category          String?  // kategori
+  serviceName       String?  // jenis_jasa (fallback untuk transaksi lama)
+  category          String?  // kategori (fallback untuk transaksi lama)
   notes             String?  // catatan
   totalAmount       Int      @default(0)
   dpAmount          Int      @default(0)
   paymentStatus     TransactionStatus @default(DP_BAYAR)
 
-  orderStatus       String   @default("Diproses") // "Antri", "Diproses", "Selesai", "Dibatalkan"
+  orderStatus       String   @default("Diproses") // "Diproses", "Selesai", "Dibatalkan"
   paymentMethod     String?  // metode_pembayaran
   isDeleted         Boolean  @default(false)
   createdAt         DateTime @default(now())
 
+  items             TransactionItem[]
 }
 
+// 7. Item per Transaksi (untuk multi-barang dalam 1 nota)
+model TransactionItem {
+  id            String      @id @default(uuid())
+  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  transactionId String
+
+  itemName      String           // nama barang, misal "Sepatu Nike", "Tas Kulit"
+  description   String?          // deskripsi kerusakan / catatan barang
+  serviceName   String?          // jenis jasa untuk item ini
+  category      String?          // kategori item ini
+  price         Int      @default(0)  // harga per item
+
+  orderStatus   String   @default("Diproses")  // "Diproses" | "Selesai"
+  isPickedUp    Boolean  @default(false)        // sudah diambil customer?
+  pickedUpAt    DateTime?                       // kapan diambil
+
+  createdAt     DateTime @default(now())
+}

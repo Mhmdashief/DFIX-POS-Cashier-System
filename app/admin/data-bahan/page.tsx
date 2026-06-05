@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   Search,
   Plus,
@@ -8,7 +8,6 @@ import {
   ChevronDown,
   Calendar,
   Package,
-  CheckCircle,
   AlertTriangle,
   XCircle,
 } from "lucide-react";
@@ -141,8 +140,8 @@ export default function DataBahanPage() {
 
                   <span
                     className={`text-[13px] font-medium ${s.color === "text-[#1E1E1E]"
-                        ? "text-gray-400"
-                        : s.color
+                      ? "text-gray-400"
+                      : s.color
                       }`}
                   >
                     {s.unit}
@@ -196,7 +195,7 @@ export default function DataBahanPage() {
 
             <div className="relative w-full sm:w-auto">
               <Calendar size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-yellow-500 pointer-events-none" />
-              <select 
+              <select
                 className="pl-12 pr-10 py-3 bg-white border border-gray-200 rounded-2xl text-[14px] font-semibold text-gray-600 outline-none hover:bg-gray-50 transition-all cursor-pointer appearance-none w-full sm:w-auto"
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
@@ -287,8 +286,8 @@ export default function DataBahanPage() {
                         ${item.stock >= 5
                             ? "bg-[#E2F5EA] text-[#22C55E]"
                             : item.stock > 0
-                               ? "bg-[#FFF9E6] text-[#FACC15]"
-                               : "bg-[#FEE2E2] text-[#EF4444]"
+                              ? "bg-[#FFF9E6] text-[#FACC15]"
+                              : "bg-[#FEE2E2] text-[#EF4444]"
                           }`}
                       >
                         {item.stock >= 5
@@ -376,7 +375,7 @@ export default function DataBahanPage() {
         initialData={selectedBahan}
       />
 
-      <SuccessModal 
+      <SuccessModal
         isOpen={isSuccessOpen}
         onClose={() => setIsSuccessOpen(false)}
         title="Berhasil Diperbarui"

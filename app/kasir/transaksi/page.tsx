@@ -188,17 +188,46 @@ export default function TransaksiReparasiPage() {
                     </td>
                     <td className="py-7 px-8 font-bold text-[14px] text-zinc-800">{item.customer?.name || item.customerName || "Umum"}</td>
                     <td className="py-7 px-8">
-                      <div className="flex flex-col">
-                        <span className="text-[13px] font-bold text-zinc-700">{item.category || "Hardware"}</span>
-                        <span className="text-[10px] text-zinc-400 font-black uppercase italic tracking-tight">{item.serviceName || "Service"}</span>
-                      </div>
+                      {item.items && item.items.length > 0 ? (() => {
+                        const uniqueServices = [...new Set(item.items.map((it: any) => it.serviceName).filter(Boolean))];
+                        const uniqueCategories = [...new Set(item.items.map((it: any) => it.category).filter(Boolean))];
+                        const doneCount = item.items.filter((i: any) => i.orderStatus === "Selesai").length;
+                        return (
+                          <div className="flex flex-col">
+                            <span className="text-[13px] font-bold text-zinc-700">
+                              {uniqueServices.length > 0 ? uniqueServices.join(", ") : "—"}
+                            </span>
+                            <span className="text-[10px] text-zinc-400 font-black uppercase italic tracking-tight">
+                              {uniqueCategories.length > 0 ? uniqueCategories.join(", ") : ""} · {doneCount}/{item.items.length} selesai
+                            </span>
+                          </div>
+                        );
+                      })() : (
+                        <div className="flex flex-col">
+                          <span className="text-[13px] font-bold text-zinc-700">{item.category || "Hardware"}</span>
+                          <span className="text-[10px] text-zinc-400 font-black uppercase italic tracking-tight">{item.serviceName || "Service"}</span>
+                        </div>
+                      )}
                     </td>
                     <td className="py-7 px-8 text-center">
-                      <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase italic border
-                      ${item.orderStatus === 'Selesai' ? 'bg-green-50 text-green-600 border-green-100' :
-                          item.orderStatus === 'Dibatalkan' ? 'bg-red-50 text-red-500 border-red-100' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>
-                        {item.orderStatus || "Diproses"}
-                      </span>
+                      {item.items && item.items.length > 0 ? (
+                        <div className="flex flex-col items-center gap-1">
+                          <div className="w-24 h-1.5 bg-zinc-100 rounded-full overflow-hidden">
+                            <div className="h-full bg-green-400 rounded-full transition-all"
+                              style={{ width: `${(item.items.filter((i: any) => i.orderStatus === "Selesai").length / item.items.length) * 100}%` }} />
+                          </div>
+                          <span className={`text-[10px] font-black uppercase italic border px-2 py-0.5 rounded-full ${
+                            item.orderStatus === 'Selesai' ? 'bg-green-50 text-green-600 border-green-100' :
+                            item.orderStatus === 'Dibatalkan' ? 'bg-red-50 text-red-500 border-red-100' : 'bg-blue-50 text-blue-600 border-blue-100'
+                          }`}>{item.orderStatus || "Diproses"}</span>
+                        </div>
+                      ) : (
+                        <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase italic border
+                        ${item.orderStatus === 'Selesai' ? 'bg-green-50 text-green-600 border-green-100' :
+                            item.orderStatus === 'Dibatalkan' ? 'bg-red-50 text-red-500 border-red-100' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>
+                          {item.orderStatus || "Diproses"}
+                        </span>
+                      )}
                     </td>
                     <td className="py-7 px-8 text-center">
                       <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase 
@@ -227,22 +256,24 @@ export default function TransaksiReparasiPage() {
                             Buka Detail
                           </button>
 
-                          {/* UBAH STATUS */}
-                          <div className="border-t border-zinc-50">
-                            <button
-                              onClick={() => { setShowStatusOptions(!showStatusOptions); }}
-                              className="w-full px-5 py-3 text-left text-[13px] font-bold text-zinc-700 hover:bg-zinc-50 flex justify-between items-center"
-                            >
-                              Ubah Status <ChevronDown size={14} className={showStatusOptions ? 'rotate-180' : ''} />
-                            </button>
-                            {showStatusOptions && (
-                              <div className="bg-zinc-50 py-1 border-t border-zinc-100">
-                                {['Selesai', 'Dibatalkan'].map(s => (
-                                  <button key={s} onClick={() => updateStatus(item.id, s)} className="w-full px-8 py-2 text-left text-[11px] font-black text-zinc-400 hover:text-[#2D4F53] uppercase transition-colors">{s}</button>
-                                ))}
-                              </div>
-                            )}
-                          </div>
+                          {/* UBAH STATUS — disembunyikan jika sudah Selesai & Lunas */}
+                          {!(item.orderStatus === 'Selesai' && item.paymentStatus === 'LUNAS') && (
+                            <div className="border-t border-zinc-50">
+                              <button
+                                onClick={() => { setShowStatusOptions(!showStatusOptions); }}
+                                className="w-full px-5 py-3 text-left text-[13px] font-bold text-zinc-700 hover:bg-zinc-50 flex justify-between items-center"
+                              >
+                                Ubah Status <ChevronDown size={14} className={showStatusOptions ? 'rotate-180' : ''} />
+                              </button>
+                              {showStatusOptions && (
+                                <div className="bg-zinc-50 py-1 border-t border-zinc-100">
+                                  {['Selesai', 'Dibatalkan'].map(s => (
+                                    <button key={s} onClick={() => updateStatus(item.id, s)} className="w-full px-8 py-2 text-left text-[11px] font-black text-zinc-400 hover:text-[#2D4F53] uppercase transition-colors">{s}</button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
 
                           <button
                             onClick={() => deleteTransaction(item.id)}

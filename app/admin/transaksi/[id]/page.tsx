@@ -2,15 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import { ShieldOff, ArrowLeft, LogIn } from "lucide-react";
-
-/**
- * Halaman ini dengan sengaja diblokir untuk role ADMIN.
- * Detail transaksi — termasuk manajemen status dan pembayaran —
- * hanya dapat diakses oleh role KASIR melalui /kasir/transaksi/[id].
- *
- * Middleware.ts seharusnya sudah meng-handle redirect otomatis,
- * halaman ini berfungsi sebagai fallback UI jika middleware bypass.
- */
 export default function AdminTransaksiDetailBlocked() {
   const router = useRouter();
 

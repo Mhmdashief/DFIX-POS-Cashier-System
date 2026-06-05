@@ -180,10 +180,21 @@ export default function AdminTransaksiPage() {
                       {item.customer?.name || item.customerName || "Umum"}
                     </td>
                     <td className="py-5 px-6">
-                      <div className="flex flex-col">
-                        <span className="text-[13px] font-bold text-zinc-700">{item.category || "—"}</span>
-                        <span className="text-[11px] text-zinc-400 font-bold uppercase italic tracking-tight">{item.serviceName || "—"}</span>
-                      </div>
+                      {item.items && item.items.length > 0 ? (() => {
+                        const uniqueServices = [...new Set(item.items.map((it: any) => it.serviceName).filter(Boolean))];
+                        const uniqueCategories = [...new Set(item.items.map((it: any) => it.category).filter(Boolean))];
+                        return (
+                          <div className="flex flex-col">
+                            <span className="text-[13px] font-bold text-zinc-700">{uniqueServices.length > 0 ? uniqueServices.join(", ") : "—"}</span>
+                            <span className="text-[11px] text-zinc-400 font-bold uppercase italic tracking-tight">{uniqueCategories.length > 0 ? uniqueCategories.join(", ") : `${item.items.length} barang`}</span>
+                          </div>
+                        );
+                      })() : (
+                        <div className="flex flex-col">
+                          <span className="text-[13px] font-bold text-zinc-700">{item.category || "—"}</span>
+                          <span className="text-[11px] text-zinc-400 font-bold uppercase italic tracking-tight">{item.serviceName || "—"}</span>
+                        </div>
+                      )}
                     </td>
                     <td className="py-5 px-6 text-center">
                       <span className={`px-3.5 py-1.5 rounded-full text-[10px] font-black uppercase border ${

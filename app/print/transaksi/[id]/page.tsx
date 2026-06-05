@@ -175,17 +175,44 @@ export default async function PrintNotaPage({
 
         <hr />
 
-        {/* LAYANAN */}
-        <p className="section-title">Layanan</p>
-        <div className="row">
-          <span className="label">{(data as any).serviceName || "-"}</span>
-          <span className="value">{formatIDR(totalAmount)}</span>
-        </div>
-        {(data as any).category && (
-          <div className="row">
-            <span className="label" style={{ color: "#999", fontSize: 11 }}>Kategori</span>
-            <span className="value" style={{ color: "#999", fontSize: 11 }}>{(data as any).category}</span>
-          </div>
+        {/* LAYANAN / DAFTAR BARANG */}
+        <p className="section-title">Layanan & Barang</p>
+        {data.items && data.items.length > 0 ? (
+          data.items.map((item: any, i: number) => (
+            <div key={item.id || i} style={{ marginBottom: 12 }}>
+              <div className="row" style={{ margin: "2px 0" }}>
+                <span className="label" style={{ fontWeight: 600, color: "#161616" }}>
+                  {item.itemName} <span style={{ color: "#666", fontWeight: 400 }}>({item.serviceName || "Jasa"})</span>
+                </span>
+                <span className="value">{formatIDR(Number(item.price || 0))}</span>
+              </div>
+              {item.category && (
+                <div className="row" style={{ margin: 0 }}>
+                  <span className="label" style={{ color: "#888", fontSize: 11, paddingLeft: 4 }}>Kategori: {item.category}</span>
+                </div>
+              )}
+              {item.description && (
+                <div className="row" style={{ margin: 0 }}>
+                  <span className="label" style={{ color: "#888", fontSize: 11, paddingLeft: 4, fontStyle: "italic" }}>
+                    Ket: {item.description}
+                  </span>
+                </div>
+              )}
+            </div>
+          ))
+        ) : (
+          <>
+            <div className="row">
+              <span className="label">{(data as any).serviceName || "-"}</span>
+              <span className="value">{formatIDR(totalAmount)}</span>
+            </div>
+            {(data as any).category && (
+              <div className="row">
+                <span className="label" style={{ color: "#999", fontSize: 11 }}>Kategori</span>
+                <span className="value" style={{ color: "#999", fontSize: 11 }}>{(data as any).category}</span>
+              </div>
+            )}
+          </>
         )}
 
         {/* BAHAN DIGUNAKAN */}

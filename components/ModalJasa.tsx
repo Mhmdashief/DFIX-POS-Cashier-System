@@ -24,15 +24,14 @@ export default function ModalJasa({ isOpen, onClose, onSave, initialData }: Moda
     if (initialData) {
       setFormData({
         nama_jasa: initialData.name || "",
-        kategori: typeof initialData.kategori === 'string' 
-          ? initialData.kategori.split(',').map((s: string) => s.trim())
-          : (Array.isArray(initialData.kategori) ? initialData.kategori : []),
+        kategori: typeof initialData.category === 'string'
+          ? initialData.category.split(',').map((s: string) => s.trim()).filter(Boolean)
+          : (Array.isArray(initialData.category) ? initialData.category : []),
         status: initialData.status || "Aktif"
       });
     } else {
       setFormData({ nama_jasa: "", kategori: [], status: "Aktif" });
     }
-
   }, [initialData, isOpen]);
 
   const handleCheckboxChange = (cat: string) => {

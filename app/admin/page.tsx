@@ -132,10 +132,21 @@ export default function AdminDashboard() {
                       </td>
                       <td className="py-4 px-6 text-[13px] font-bold text-zinc-700">{item.customer?.name || item.customerName || "Umum"}</td>
                       <td className="py-4 px-6 text-[13px] text-zinc-600 font-medium">
-                        <div className="flex flex-col">
-                          <span>{item.category || "—"}</span>
-                          <span className="text-[11px] text-zinc-400">{item.serviceName || "—"}</span>
-                        </div>
+                        {item.items && item.items.length > 0 ? (() => {
+                          const uniqueServices = [...new Set(item.items.map((it: any) => it.serviceName).filter(Boolean))];
+                          const uniqueCategories = [...new Set(item.items.map((it: any) => it.category).filter(Boolean))];
+                          return (
+                            <div className="flex flex-col">
+                              <span className="font-bold text-zinc-700">{uniqueServices.length > 0 ? uniqueServices.join(", ") : "—"}</span>
+                              <span className="text-[11px] text-zinc-400">{uniqueCategories.length > 0 ? uniqueCategories.join(", ") : `${item.items.length} barang`}</span>
+                            </div>
+                          );
+                        })() : (
+                          <div className="flex flex-col">
+                            <span>{item.category || "—"}</span>
+                            <span className="text-[11px] text-zinc-400">{item.serviceName || "—"}</span>
+                          </div>
+                        )}
                       </td>
                       <td className="py-4 px-6">
                         <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase border ${item.orderStatus === 'Selesai' ? 'bg-green-50 text-green-600 border-green-100' :

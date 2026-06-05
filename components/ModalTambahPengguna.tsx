@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { X, User, Lock, Eye, ChevronDown, Mail } from "lucide-react";
 
 interface ModalTambahPenggunaProps {
@@ -20,13 +20,20 @@ export default function ModalTambahPengguna({ isOpen, onClose, onSave, initialDa
     status: "AKTIF",
   });
 
+  const [roleOpen, setRoleOpen] = useState(false);
+  const [statusOpen, setStatusOpen] = useState(false);
+  const roleRef = useRef<HTMLDivElement>(null);
+  const statusRef = useRef<HTMLDivElement>(null);
+
   // Efek untuk mengisi form saat Edit Pengguna diklik
   useEffect(() => {
+    setRoleOpen(false);
+    setStatusOpen(false);
     if (initialData) {
       setFormData({
         name: initialData.name || "",
         username: initialData.username || "",
-        password: initialData.password || "",
+        password: "", // Dikosongkan — hash tidak boleh ditampilkan
         role: initialData.role || "KASIR",
         status: initialData.status || "AKTIF",
       });
@@ -41,6 +48,19 @@ export default function ModalTambahPengguna({ isOpen, onClose, onSave, initialDa
       });
     }
   }, [initialData, isOpen]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (roleRef.current && !roleRef.current.contains(e.target as Node)) {
+        setRoleOpen(false);
+      }
+      if (statusRef.current && !statusRef.current.contains(e.target as Node)) {
+        setStatusOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   if (!isOpen) return null;
 
@@ -101,15 +121,20 @@ export default function ModalTambahPengguna({ isOpen, onClose, onSave, initialDa
 
           {/* Password */}
           <div className="space-y-2">
-            <label className="text-[14px] font-bold text-[#161616]">Password</label>
+            <label className="text-[14px] font-bold text-[#161616]">
+              Password
+              {initialData && (
+                <span className="ml-2 text-[12px] font-normal text-zinc-400">(Kosongkan jika tidak ingin mengubah)</span>
+              )}
+            </label>
             <div className="relative">
               <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#F2C94C]" />
               <div className="absolute left-10 top-1/2 -translate-y-1/2 w-[1px] h-4 bg-zinc-200" />
               <input
-                required
+                required={!initialData}
                 type={showPassword ? "text" : "password"}
                 value={formData.password}
-                placeholder="Masukkan password"
+                placeholder={initialData ? "Biarkan kosong jika tidak diubah" : "Masukkan password"}
                 className="w-full pl-14 pr-12 py-3.5 rounded-xl border border-zinc-200 text-[14px] focus:outline-none focus:border-zinc-400"
                 onChange={(e) => setFormData({...formData, password: e.target.value})}
               />
@@ -120,37 +145,104 @@ export default function ModalTambahPengguna({ isOpen, onClose, onSave, initialDa
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
+            <div className="space-y-2" ref={roleRef}>
               <label className="text-[14px] font-bold text-[#161616]">Role</label>
               <div className="relative">
-                <User size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#F2C94C]" />
-                <div className="absolute left-10 top-1/2 -translate-y-1/2 w-[1px] h-4 bg-zinc-200" />
-                <select 
-                  value={formData.role}
-                  className="w-full pl-14 pr-10 py-3.5 rounded-xl border border-zinc-200 text-[14px] appearance-none bg-white text-zinc-600 focus:outline-none"
-                  onChange={(e) => setFormData({...formData, role: e.target.value})}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRoleOpen(!roleOpen);
+                    setStatusOpen(false);
+                  }}
+                  className="w-full pl-14 pr-10 py-3.5 rounded-xl border border-zinc-200 text-[14px] bg-white text-zinc-800 focus:outline-none flex items-center justify-between hover:border-zinc-300 transition-colors text-left"
                 >
-                  <option value="KASIR">Kasir</option>
-                  <option value="ADMIN">Admin</option>
-                </select>
-                <ChevronDown size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
+                  <div className="flex items-center gap-2">
+                    <User size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#F2C94C]" />
+                    <div className="absolute left-10 top-1/2 -translate-y-1/2 w-[1px] h-4 bg-zinc-200" />
+                    <span>{formData.role === "ADMIN" ? "Admin" : "Kasir"}</span>
+                  </div>
+                  <ChevronDown size={18} className={`text-zinc-400 transition-transform duration-200 ${roleOpen ? 'rotate-180' : ''}`} />
+                </button>
+                
+                {roleOpen && (
+                  <div className="absolute left-0 right-0 mt-1.5 bg-white border border-zinc-100 rounded-xl shadow-xl z-[99] overflow-hidden animate-in fade-in-50 slide-in-from-top-1 duration-100">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormData({...formData, role: "KASIR"});
+                        setRoleOpen(false);
+                      }}
+                      className={`w-full px-5 py-3 text-left text-[14px] hover:bg-zinc-50 flex items-center justify-between transition-colors ${formData.role === "KASIR" ? "bg-zinc-50/70 font-semibold text-[#2D4B50]" : "text-zinc-600"}`}
+                    >
+                      <span>Kasir</span>
+                      {formData.role === "KASIR" && <span className="w-2 h-2 rounded-full bg-[#2D4B50]" />}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormData({...formData, role: "ADMIN"});
+                        setRoleOpen(false);
+                      }}
+                      className={`w-full px-5 py-3 text-left text-[14px] hover:bg-zinc-50 flex items-center justify-between transition-colors ${formData.role === "ADMIN" ? "bg-zinc-50/70 font-semibold text-[#2D4B50]" : "text-zinc-600"}`}
+                    >
+                      <span>Admin</span>
+                      {formData.role === "ADMIN" && <span className="w-2 h-2 rounded-full bg-[#2D4B50]" />}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2" ref={statusRef}>
               <label className="text-[14px] font-bold text-[#161616]">Status</label>
               <div className="relative">
-                <User size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#F2C94C]" />
-                <div className="absolute left-10 top-1/2 -translate-y-1/2 w-[1px] h-4 bg-zinc-200" />
-                <select 
-                  value={formData.status}
-                  className="w-full pl-14 pr-10 py-3.5 rounded-xl border border-zinc-200 text-[14px] appearance-none bg-white text-zinc-600 focus:outline-none"
-                  onChange={(e) => setFormData({...formData, status: e.target.value})}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStatusOpen(!statusOpen);
+                    setRoleOpen(false);
+                  }}
+                  className="w-full pl-14 pr-10 py-3.5 rounded-xl border border-zinc-200 text-[14px] bg-white text-zinc-800 focus:outline-none flex items-center justify-between hover:border-zinc-300 transition-colors text-left"
                 >
-                  <option value="AKTIF">Aktif</option>
-                  <option value="NONAKTIF">Nonaktif</option>
-                </select>
-                <ChevronDown size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
+                  <div className="flex items-center gap-2">
+                    <User size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#F2C94C]" />
+                    <div className="absolute left-10 top-1/2 -translate-y-1/2 w-[1px] h-4 bg-zinc-200" />
+                    <span className="flex items-center gap-2">
+                      <span className={`w-2.5 h-2.5 rounded-full ${formData.status === 'AKTIF' ? 'bg-[#34C759]' : 'bg-[#F54336]'}`} />
+                      {formData.status === "AKTIF" ? "Aktif" : "Nonaktif"}
+                    </span>
+                  </div>
+                  <ChevronDown size={18} className={`text-zinc-400 transition-transform duration-200 ${statusOpen ? 'rotate-180' : ''}`} />
+                </button>
+                
+                {statusOpen && (
+                  <div className="absolute left-0 right-0 mt-1.5 bg-white border border-zinc-100 rounded-xl shadow-xl z-[99] overflow-hidden animate-in fade-in-50 slide-in-from-top-1 duration-100">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormData({...formData, status: "AKTIF"});
+                        setStatusOpen(false);
+                      }}
+                      className={`w-full px-5 py-3 text-left text-[14px] hover:bg-zinc-50 flex items-center gap-3 transition-colors ${formData.status === "AKTIF" ? "bg-zinc-50/70 font-semibold text-[#2D4B50]" : "text-zinc-600"}`}
+                    >
+                      <span className="w-2 h-2 rounded-full bg-[#34C759]" />
+                      <span className="flex-1">Aktif</span>
+                      {formData.status === "AKTIF" && <span className="w-2 h-2 rounded-full bg-[#2D4B50]" />}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormData({...formData, status: "NONAKTIF"});
+                        setStatusOpen(false);
+                      }}
+                      className={`w-full px-5 py-3 text-left text-[14px] hover:bg-zinc-50 flex items-center gap-3 transition-colors ${formData.status === "NONAKTIF" ? "bg-zinc-50/70 font-semibold text-[#2D4B50]" : "text-zinc-600"}`}
+                    >
+                      <span className="w-2 h-2 rounded-full bg-[#F54336]" />
+                      <span className="flex-1">Nonaktif</span>
+                      {formData.status === "NONAKTIF" && <span className="w-2 h-2 rounded-full bg-[#2D4B50]" />}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>

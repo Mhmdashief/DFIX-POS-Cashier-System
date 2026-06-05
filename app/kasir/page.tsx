@@ -1,16 +1,13 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { 
-  Receipt, Clock, CheckCircle2, MoreHorizontal, 
-  ArrowUpRight, Users, RefreshCw, Eye, Edit3, Trash2, ChevronLeft 
+import { useEffect, useState } from "react";
+import {
+  Receipt, Clock, CheckCircle2,
+  Users, RefreshCw
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { 
-  getDashboardStats, 
-  updateTransactionStatusAction, 
-  deleteTransactionAction,
-  updatePaymentStatusAction
+import {
+  getDashboardStats,
 } from "@/app/actions/transaction";
 import { StatCard } from "@/components/StatCard";
 
@@ -26,7 +23,7 @@ export default function KasirDashboard() {
     try {
       setLoading(true);
       const data = await getDashboardStats();
-      
+
       if (data) {
         setStats({
           totalSales: data.totalIncome,
@@ -61,34 +58,34 @@ export default function KasirDashboard() {
 
         {/* STATS DINAMIS */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
-          <StatCard 
-            title="Total Pendapatan" 
-            value={stats.totalSales >= 1000000 ? `Rp ${(stats.totalSales/1000000).toFixed(1)}jt` : `Rp ${stats.totalSales.toLocaleString('id-ID')}`} 
-            sub="/ Bulan Ini" 
-            trend="Reset tiap tanggal 1" 
-            icon={<Receipt size={18} />} 
+          <StatCard
+            title="Total Pendapatan"
+            value={stats.totalSales >= 1000000 ? `Rp ${(stats.totalSales / 1000000).toFixed(1)}jt` : `Rp ${stats.totalSales.toLocaleString('id-ID')}`}
+            sub="/ Bulan Ini"
+            trend="Reset tiap tanggal 1"
+            icon={<Receipt size={18} />}
           />
-          <StatCard 
-            title="Pesanan Aktif" 
-            value={stats.pendingOrders} 
-            sub="/ Unit" 
-            trend="Sedang dikerjakan" 
-            isNeutral 
-            icon={<Clock size={18} />} 
+          <StatCard
+            title="Pesanan Aktif"
+            value={stats.pendingOrders}
+            sub="/ Unit"
+            trend="Sedang dikerjakan"
+            isNeutral
+            icon={<Clock size={18} />}
           />
-          <StatCard 
-            title="Reparasi Selesai" 
-            value={stats.completedOrders} 
-            sub="/ Unit" 
-            trend="Siap diambil" 
-            icon={<CheckCircle2 size={18} />} 
+          <StatCard
+            title="Reparasi Selesai"
+            value={stats.completedOrders}
+            sub="/ Unit"
+            trend="Siap diambil"
+            icon={<CheckCircle2 size={18} />}
           />
-          <StatCard 
-            title="Total Pelanggan" 
-            value={stats.totalUsers} 
-            sub="/ Orang" 
-            trend="Database member" 
-            icon={<Users size={18} />} 
+          <StatCard
+            title="Total Pelanggan"
+            value={stats.totalUsers}
+            sub="/ Orang"
+            trend="Database member"
+            icon={<Users size={18} />}
           />
         </div>
 
@@ -126,24 +123,33 @@ export default function KasirDashboard() {
                       </td>
                       <td className="py-4 px-6 text-[13px] font-bold text-zinc-700">{item.customer?.name || item.customerName || "Umum"}</td>
                       <td className="py-4 px-6 text-[13px] text-zinc-600 font-medium">
-                        <div className="flex flex-col">
-                          <span>{item.category || "—"}</span>
-                          <span className="text-[11px] text-zinc-400">{item.serviceName || "—"}</span>
-                        </div>
+                        {item.items && item.items.length > 0 ? (() => {
+                          const uniqueServices = [...new Set(item.items.map((it: any) => it.serviceName).filter(Boolean))];
+                          const uniqueCategories = [...new Set(item.items.map((it: any) => it.category).filter(Boolean))];
+                          return (
+                            <div className="flex flex-col">
+                              <span className="font-bold text-zinc-700">{uniqueServices.length > 0 ? uniqueServices.join(", ") : "—"}</span>
+                              <span className="text-[11px] text-zinc-400">{uniqueCategories.length > 0 ? uniqueCategories.join(", ") : `${item.items.length} barang`}</span>
+                            </div>
+                          );
+                        })() : (
+                          <div className="flex flex-col">
+                            <span>{item.category || "—"}</span>
+                            <span className="text-[11px] text-zinc-400">{item.serviceName || "—"}</span>
+                          </div>
+                        )}
                       </td>
                       <td className="py-4 px-6">
-                        <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase border ${
-                          item.orderStatus === 'SELESAI' ? 'bg-green-50 text-green-600 border-green-100' : 
-                          item.orderStatus === 'BATAL' ? 'bg-red-50 text-red-600 border-red-100' : 
-                          'bg-blue-50 text-blue-600 border-blue-100'
-                        }`}>
+                        <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase border ${item.orderStatus === 'SELESAI' ? 'bg-green-50 text-green-600 border-green-100' :
+                            item.orderStatus === 'BATAL' ? 'bg-red-50 text-red-600 border-red-100' :
+                              'bg-blue-50 text-blue-600 border-blue-100'
+                          }`}>
                           {item.orderStatus || 'DIPROSES'}
                         </span>
                       </td>
                       <td className="py-4 px-6">
-                        <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase border ${
-                          item.paymentStatus === 'LUNAS' ? 'bg-green-50 text-green-600 border-green-100' : 'bg-orange-50 text-orange-600 border-orange-100'
-                        }`}>
+                        <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase border ${item.paymentStatus === 'LUNAS' ? 'bg-green-50 text-green-600 border-green-100' : 'bg-orange-50 text-orange-600 border-orange-100'
+                          }`}>
                           {item.paymentStatus || 'BELUM BAYAR'}
                         </span>
                       </td>
